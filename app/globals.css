@@ -1,0 +1,232 @@
+@import "tailwindcss";
+
+:root {
+  --ink: #101c32;
+  --paper: #f6f1e8;
+  --coral: #ff6b57;
+  --yellow: #f6cf4a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--ink);
+}
+
+body {
+  margin: 0;
+  color: var(--ink);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+button,
+h1,
+p {
+  margin: 0;
+}
+
+.page-shell {
+  position: relative;
+  display: grid;
+  min-height: 100svh;
+  place-items: center;
+  overflow: hidden;
+  padding: 32px;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    var(--ink);
+  background-size: 48px 48px;
+}
+
+.glow {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(2px);
+  opacity: 0.95;
+}
+
+.glow-one {
+  top: -170px;
+  right: -90px;
+  width: 420px;
+  height: 420px;
+  background: var(--coral);
+}
+
+.glow-two {
+  bottom: -160px;
+  left: -80px;
+  width: 350px;
+  height: 350px;
+  background: var(--yellow);
+}
+
+.word-card {
+  position: relative;
+  z-index: 1;
+  width: min(780px, 100%);
+  padding: clamp(36px, 7vw, 76px);
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  box-shadow: 18px 18px 0 rgba(5, 12, 24, 0.5);
+}
+
+.eyebrow {
+  margin-bottom: 40px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.title-wrap {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.title-number {
+  position: absolute;
+  top: -14px;
+  right: -30px;
+  color: var(--coral);
+  font-family: "Courier New", monospace;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+h1 {
+  font-size: clamp(3.8rem, 13vw, 8.5rem);
+  font-weight: 900;
+  letter-spacing: -0.075em;
+  line-height: 0.84;
+  animation: word-in 420ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.description {
+  max-width: 460px;
+  margin-top: 42px;
+  font-size: clamp(1rem, 2vw, 1.18rem);
+  line-height: 1.6;
+}
+
+button {
+  display: inline-flex;
+  align-items: center;
+  gap: 28px;
+  margin-top: 34px;
+  padding: 17px 20px 17px 24px;
+  border: 2px solid var(--ink);
+  background: var(--coral);
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+button:hover {
+  transform: translate(-3px, -3px);
+  box-shadow: 6px 6px 0 var(--ink);
+  background: #ff816f;
+}
+
+button:active {
+  transform: translate(0, 0);
+  box-shadow: none;
+}
+
+button:focus-visible {
+  outline: 3px solid var(--paper);
+  outline-offset: 4px;
+  box-shadow: 0 0 0 7px var(--ink);
+}
+
+.arrow {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.progress {
+  display: flex;
+  gap: 7px;
+  margin-top: 44px;
+}
+
+.progress span {
+  width: 26px;
+  height: 4px;
+  background: rgba(16, 28, 50, 0.2);
+  transition: width 220ms ease, background 220ms ease;
+}
+
+.progress span.active {
+  width: 48px;
+  background: var(--ink);
+}
+
+.corner-note {
+  position: absolute;
+  right: 28px;
+  bottom: 28px;
+  z-index: 1;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  writing-mode: vertical-rl;
+}
+
+@keyframes word-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px) skewY(2deg);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) skewY(0);
+  }
+}
+
+@media (max-width: 620px) {
+  .page-shell {
+    padding: 20px;
+  }
+
+  .word-card {
+    padding: 38px 28px;
+    box-shadow: 10px 10px 0 rgba(5, 12, 24, 0.5);
+  }
+
+  .eyebrow {
+    margin-bottom: 32px;
+  }
+
+  .title-number {
+    top: -18px;
+    right: -8px;
+  }
+
+  .corner-note {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

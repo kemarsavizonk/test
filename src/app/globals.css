@@ -42,6 +42,7 @@ textarea:focus-visible {
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; border-radius: 11px; border: 1px solid transparent; padding: 10px 17px; font-weight: 700; transition: .18s ease; }
 .btn-primary { color: #fff; background: var(--brand); }
 .btn-primary:hover { background: var(--brand-dark); transform: translateY(-1px); }
+.btn-primary:disabled { background: #cbd5e1; color: #64748b; }
 .btn-secondary { background: #fff; border-color: var(--line); color: var(--ink); }
 .btn-secondary:hover { border-color: #bac6da; background: var(--surface); }
 .btn-ghost { background: transparent; color: var(--muted); }

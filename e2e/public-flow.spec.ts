@@ -1,0 +1,5 @@
+import { expect, test } from "@playwright/test";
+
+test("public home and local preview are usable",async({page})=>{await page.goto("/");await expect(page.getByRole("heading",{name:/train with intent/i})).toBeVisible();await page.getByRole("link",{name:"Explore preview"}).click();await expect(page.getByRole("heading",{name:"Your training dashboard"})).toBeVisible();});
+
+test("a preview workout can be logged and reviewed",async({page})=>{await page.goto("/dashboard/workouts/new");await page.waitForLoadState("networkidle");await page.getByLabel("Workout title").fill("Quality assurance session");await page.getByRole("combobox",{name:"Exercise",exact:true}).fill("Bench Press");await page.getByLabel("Set 1 weight").fill("135");await page.getByLabel("Set 1 repetitions").fill("8");await page.getByRole("button",{name:"Finish workout"}).first().click();await expect(page.getByRole("heading",{name:"Every session, in one place"})).toBeVisible();await expect(page.getByRole("heading",{name:"Quality assurance session"})).toBeVisible();});

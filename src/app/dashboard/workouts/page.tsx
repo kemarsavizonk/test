@@ -1,0 +1,22 @@
+"use client";
+
+import { CalendarDays, Dumbbell, Plus, Search, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { format } from "date-fns";
+import { useMemo, useState } from "react";
+import { Badge, Button, Card, EmptyState, PageHeader } from "@/components/ui";
+import { useWorkouts } from "@/hooks/use-workouts";
+import { deleteWorkout } from "@/lib/workout-repository";
+import { formatNumber } from "@/lib/utils";
+import { workoutVolume } from "@/lib/fitness";
+
+export default function WorkoutHistoryPage() {
+  const { workouts, loading, error, refresh } = useWorkouts(); const [query, setQuery] = useState(""); const [status, setStatus] = useState("all"); const [deleting, setDeleting] = useState("");
+  const filtered = useMemo(() => workouts.filter(item => (status === "all" || item.status === status) && `${item.title} ${item.exercises.map(x => x.name).join(" ")}`.toLowerCase().includes(query.toLowerCase())), [workouts, query, status]);
+  const remove = async (id: string) => { if (!window.confirm("Delete this workout permanently?")) return; setDeleting(id); await deleteWorkout(id); await refresh(); setDeleting(""); };
+  return <div className="app-page"><PageHeader eyebrow="Training history" title="Every session, in one place" description="Search, review, and manage the workouts that power your reports." action={<Link href="/dashboard/workouts/new" className="btn btn-primary"><Plus size={18} /> Log workout</Link>} />
+    <Card style={{ padding: 16, marginBottom: 18 }}><div style={{ display: "grid", gridTemplateColumns: "1fr 180px", gap: 12 }} className="history-filters"><label style={{ position: "relative" }}><Search size={18} style={{ position: "absolute", left: 13, top: 14, color: "#94a3b8" }} /><input className="input" style={{ paddingLeft: 42 }} value={query} onChange={event => setQuery(event.target.value)} placeholder="Search workouts or exercises" aria-label="Search workout history" /></label><select className="input" value={status} onChange={event => setStatus(event.target.value)} aria-label="Filter status"><option value="all">All statuses</option><option value="completed">Completed</option><option value="draft">Drafts</option></select></div></Card>
+    {error && <div role="alert" style={{ color: "#b91c1c", marginBottom: 15 }}>{error}</div>}
+    <Card>{loading ? <div className="muted" style={{ padding: 35 }}>Loading workouts…</div> : filtered.length === 0 ? <EmptyState icon={workouts.length ? <Search /> : <Dumbbell />} title={workouts.length ? "No matching workouts" : "No workouts recorded yet"} description={workouts.length ? "Try a different search term or status filter." : "Record your first session to start a private, searchable training history."} action={!workouts.length ? <Link href="/dashboard/workouts/new" className="btn btn-primary">Log first workout</Link> : undefined} /> : <div>{filtered.map(workout => <article key={workout.id} style={{ display: "grid", gridTemplateColumns: "50px minmax(0,1fr) auto", alignItems: "center", gap: 16, padding: "20px 22px", borderBottom: "1px solid #edf0f5" }}><span style={{ display: "grid", placeItems: "center", width: 48, height: 48, color: "#1642bb", background: "#eff4ff", borderRadius: 13 }}><CalendarDays size={21} /></span><div><div style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}><h2 style={{ margin: 0, fontSize: 17 }}>{workout.title}</h2><Badge tone={workout.status === "completed" ? "green" : "gray"}>{workout.status}</Badge></div><p className="muted" style={{ margin: "6px 0", fontSize: 13 }}>{format(new Date(workout.performedAt), "EEEE, MMMM d, yyyy · h:mm a")}{workout.durationMinutes ? ` · ${workout.durationMinutes} min` : ""}</p><p style={{ margin: 0, fontSize: 13 }}>{workout.exercises.map(item => `${item.name} (${item.sets.length})`).join(" · ")}</p></div><div style={{ textAlign: "right" }}><strong style={{ display: "block" }}>{formatNumber(Math.round(workoutVolume(workout)))} lb</strong><span className="muted" style={{ fontSize: 11 }}>working volume</span><Button variant="ghost" style={{ display: "flex", margin: "5px 0 0 auto", minHeight: 32, padding: 6, color: "#dc2626" }} aria-label={`Delete ${workout.title}`} disabled={deleting === workout.id} onClick={() => void remove(workout.id)}><Trash2 size={16} /></Button></div></article>)}</div>}</Card><style jsx>{`@media(max-width:600px){.history-filters{grid-template-columns:1fr!important}}`}</style>
+  </div>;
+}

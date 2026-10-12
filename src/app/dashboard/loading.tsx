@@ -1,0 +1,1 @@
+export default function Loading(){return <div className="app-page"><div style={{height:38,width:300,maxWidth:"80%",borderRadius:10,background:"#e9eef5",marginBottom:20}}/><div className="grid-auto">{[1,2,3,4].map(item=><div className="card" key={item} style={{height:130,background:"linear-gradient(100deg,#f8fafc,#eef2f7,#f8fafc)"}}/>)}</div></div>}

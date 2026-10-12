@@ -1,0 +1,106 @@
+import { KG_TO_LB } from "@/lib/constants";
+import type { PeriodMetrics, WeightUnit, WorkoutExercise, WorkoutSession, WorkoutSet } from "@/lib/types";
+
+export function normalizeExerciseName(name: string) {
+  return name.trim().replace(/\s+/g, " ").toLocaleLowerCase();
+}
+
+export function convertWeight(value: number, from: WeightUnit, to: WeightUnit) {
+  if (from === to) return value;
+  return from === "kg" ? value * KG_TO_LB : value / KG_TO_LB;
+}
+
+export function toCanonicalKg(value: number, unit: WeightUnit) {
+  return unit === "kg" ? value : value / KG_TO_LB;
+}
+
+export function fromCanonicalKg(value: number, unit: WeightUnit) {
+  return unit === "kg" ? value : value * KG_TO_LB;
+}
+
+export function percentageChange(current: number, previous?: number | null) {
+  if (previous == null || previous === 0) return null;
+  return ((current - previous) / previous) * 100;
+}
+
+export function estimateOneRepMax(weight: number, repetitions: number) {
+  if (weight < 0 || repetitions <= 0 || repetitions > 30) return null;
+  return weight * (1 + repetitions / 30);
+}
+
+export function setVolume(set: WorkoutSet) {
+  if (!set.completed || set.type === "warmup" || set.weight <= 0) return 0;
+  return set.weight * set.repetitions;
+}
+
+export function exerciseVolume(exercise: WorkoutExercise) {
+  return exercise.sets.reduce((total, set) => total + setVolume(set), 0);
+}
+
+export function workoutVolume(workout: WorkoutSession) {
+  return workout.exercises.reduce((total, exercise) => total + exerciseVolume(exercise), 0);
+}
+
+export function maximumWeight(exercise: WorkoutExercise) {
+  const eligible = exercise.sets.filter((set) => set.completed && set.type !== "warmup");
+  return eligible.length ? Math.max(...eligible.map((set) => set.weight)) : null;
+}
+
+export function bestEstimatedOneRepMax(exercise: WorkoutExercise) {
+  const estimates = exercise.sets
+    .filter((set) => set.completed && set.type !== "warmup")
+    .map((set) => estimateOneRepMax(set.weight, set.repetitions))
+    .filter((value): value is number => value !== null);
+  return estimates.length ? Math.max(...estimates) : null;
+}
+
+export function aggregatePeriod(workouts: WorkoutSession[]): PeriodMetrics {
+  const completed = workouts.filter((workout) => workout.status === "completed");
+  const days = new Set(completed.map((workout) => workout.performedAt.slice(0, 10)));
+  const completedSets = completed.flatMap((workout) =>
+    workout.exercises.flatMap((exercise) =>
+      exercise.sets.filter((set) => set.completed && set.type !== "warmup"),
+    ),
+  );
+  const exercises = new Set(
+    completed.flatMap((workout) => workout.exercises.map((exercise) => normalizeExerciseName(exercise.name))),
+  );
+
+  return {
+    workouts: completed.length,
+    daysTrained: days.size,
+    sets: completedSets.length,
+    repetitions: completedSets.reduce((total, set) => total + set.repetitions, 0),
+    volume: completed.reduce((total, workout) => total + workoutVolume(workout), 0),
+    exerciseCount: exercises.size,
+  };
+}
+
+export function buildPerformanceSummary(current: PeriodMetrics, previous?: PeriodMetrics) {
+  if (current.workouts === 0) {
+    return "No completed workouts were recorded during this period. Log a workout to begin building a performance baseline.";
+  }
+
+  const base = `You completed ${current.workouts} workout${current.workouts === 1 ? "" : "s"} across ${current.daysTrained} training day${current.daysTrained === 1 ? "" : "s"}, totaling ${current.sets} working sets and ${current.repetitions} repetitions.`;
+  if (!previous) return `${base} More history is needed for a period-over-period comparison.`;
+
+  const workoutDelta = current.workouts - previous.workouts;
+  const volumeDelta = percentageChange(current.volume, previous.volume);
+  const workoutPhrase = workoutDelta === 0
+    ? "Workout frequency was unchanged."
+    : `That is ${Math.abs(workoutDelta)} ${workoutDelta > 0 ? "more" : "fewer"} workout${Math.abs(workoutDelta) === 1 ? "" : "s"} than the comparison period.`;
+  const volumePhrase = volumeDelta == null
+    ? "Comparable training-volume data is not yet available."
+    : `Recorded weighted volume ${volumeDelta >= 0 ? "increased" : "decreased"} by ${Math.abs(volumeDelta).toFixed(1)}%.`;
+  return `${base} ${workoutPhrase} ${volumePhrase}`;
+}
+
+export function formatWeight(value: number, unit: WeightUnit) {
+  return `${value.toLocaleString(undefined, { maximumFractionDigits: 1 })} ${unit}`;
+}
+
+export function createId() {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}

@@ -1,5 +1,6 @@
 "use client";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { fromCanonicalKg, normalizeExerciseName, toCanonicalKg } from "@/lib/fitness";
 import type { WeightUnit, WorkoutSession } from "@/lib/types";
@@ -55,6 +56,36 @@ export async function getCurrentUser() {
   if (!supabase) return null;
   const { data } = await supabase.auth.getUser();
   return data.user;
+}
+
+export async function getPreferredWeightUnit(): Promise<WeightUnit> {
+  const supabase = createSupabaseBrowserClient();
+  const user = await getCurrentUser();
+  if (!supabase || !user) {
+    try {
+      const settings = JSON.parse(localStorage.getItem("kemtech-preview-settings") ?? "{}");
+      return settings.unit === "kg" ? "kg" : "lb";
+    } catch { return "lb"; }
+  }
+  const { data } = await supabase.from("profiles").select("preferred_weight_unit").eq("id", user.id).maybeSingle();
+  return data?.preferred_weight_unit === "kg" ? "kg" : "lb";
+}
+
+async function insertWorkoutExercises(supabase: SupabaseClient, userId: string, sessionId: string, workout: WorkoutSession, displayUnit: WeightUnit) {
+  for (const [sortOrder, item] of workout.exercises.entries()) {
+    const normalizedName = normalizeExerciseName(item.name);
+    let { data: exercise } = await supabase.from("exercises").select("id").eq("normalized_name", normalizedName).or(`user_id.eq.${userId},user_id.is.null`).limit(1).maybeSingle();
+    if (!exercise) {
+      const { data: muscleGroup } = await supabase.from("muscle_groups").select("id").eq("name", item.muscleGroup).or(`user_id.eq.${userId},user_id.is.null`).limit(1).maybeSingle();
+      const result = await supabase.from("exercises").insert({ user_id: userId, name: item.name, normalized_name: normalizedName, primary_muscle_group_id: muscleGroup?.id ?? null, equipment_type: item.equipment ?? null }).select("id").single();
+      if (result.error) throw result.error;
+      exercise = result.data;
+    }
+    const { data: workoutExercise, error: itemError } = await supabase.from("workout_exercises").insert({ workout_session_id: sessionId, exercise_id: exercise.id, sort_order: sortOrder, notes: item.notes ?? null }).select("id").single();
+    if (itemError) throw itemError;
+    const { error: setsError } = await supabase.from("workout_sets").insert(item.sets.map((set) => ({ workout_exercise_id: workoutExercise.id, set_number: set.setNumber, weight_kg: toCanonicalKg(set.weight, displayUnit), repetitions: set.repetitions, is_completed: set.completed, set_type: set.type, perceived_exertion: set.rpe ?? null })));
+    if (setsError) throw setsError;
+  }
 }
 
 export async function listWorkouts(): Promise<WorkoutSession[]> {
@@ -141,65 +172,23 @@ export async function saveWorkout(workout: WorkoutSession, displayUnit: WeightUn
     .single();
   if (sessionError) throw sessionError;
 
-  for (const [sortOrder, item] of workout.exercises.entries()) {
-    const normalizedName = normalizeExerciseName(item.name);
-    let { data: exercise } = await supabase
-      .from("exercises")
-      .select("id")
-      .eq("normalized_name", normalizedName)
-      .or(`user_id.eq.${user.id},user_id.is.null`)
-      .limit(1)
-      .maybeSingle();
-
-    if (!exercise) {
-      const { data: muscleGroup } = await supabase
-        .from("muscle_groups")
-        .select("id")
-        .eq("name", item.muscleGroup)
-        .or(`user_id.eq.${user.id},user_id.is.null`)
-        .limit(1)
-        .maybeSingle();
-      const result = await supabase
-        .from("exercises")
-        .insert({
-          user_id: user.id,
-          name: item.name,
-          normalized_name: normalizedName,
-          primary_muscle_group_id: muscleGroup?.id ?? null,
-          equipment_type: item.equipment ?? null,
-        })
-        .select("id")
-        .single();
-      if (result.error) throw result.error;
-      exercise = result.data;
-    }
-
-    const { data: workoutExercise, error: itemError } = await supabase
-      .from("workout_exercises")
-      .insert({
-        workout_session_id: session.id,
-        exercise_id: exercise.id,
-        sort_order: sortOrder,
-        notes: item.notes ?? null,
-      })
-      .select("id")
-      .single();
-    if (itemError) throw itemError;
-
-    const { error: setsError } = await supabase.from("workout_sets").insert(
-      item.sets.map((set) => ({
-        workout_exercise_id: workoutExercise.id,
-        set_number: set.setNumber,
-        weight_kg: toCanonicalKg(set.weight, displayUnit),
-        repetitions: set.repetitions,
-        is_completed: set.completed,
-        set_type: set.type,
-        perceived_exertion: set.rpe ?? null,
-      })),
-    );
-    if (setsError) throw setsError;
-  }
+  await insertWorkoutExercises(supabase, user.id, session.id, workout, displayUnit);
   return { ...workout, id: session.id };
+}
+
+export async function updateWorkout(workout: WorkoutSession, displayUnit: WeightUnit) {
+  const supabase = createSupabaseBrowserClient();
+  const user = await getCurrentUser();
+  if (!supabase || !user) {
+    writeLocal([workout, ...readLocal().filter((item) => item.id !== workout.id)]);
+    return workout;
+  }
+  const { error: sessionError } = await supabase.from("workout_sessions").update({ title: workout.title, performed_at: workout.performedAt, completed_at: workout.completedAt ?? null, status: workout.status, notes: workout.notes ?? null, duration_minutes: workout.durationMinutes ?? null }).eq("id", workout.id).eq("user_id", user.id);
+  if (sessionError) throw sessionError;
+  const { error: deleteError } = await supabase.from("workout_exercises").delete().eq("workout_session_id", workout.id);
+  if (deleteError) throw deleteError;
+  await insertWorkoutExercises(supabase, user.id, workout.id, workout, displayUnit);
+  return workout;
 }
 
 export async function deleteWorkout(id: string) {

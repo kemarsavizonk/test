@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aggregatePeriod, buildPerformanceSummary, convertWeight, estimateOneRepMax, percentageChange, setVolume, workoutVolume } from "@/lib/fitness";
+import { aggregatePeriod, buildLatestExerciseComparisons, buildPerformanceSummary, convertWeight, estimateOneRepMax, percentageChange, setVolume, workoutVolume } from "@/lib/fitness";
 import type { WorkoutSession, WorkoutSet } from "@/lib/types";
 
 const set = (overrides: Partial<WorkoutSet> = {}): WorkoutSet => ({ id:"set-1",setNumber:1,weight:100,repetitions:10,completed:true,type:"working",...overrides });
@@ -14,4 +14,5 @@ describe("fitness calculations",()=>{
   it("does not manufacture percentage changes from zero",()=>{expect(percentageChange(10,0)).toBeNull();expect(percentageChange(120,100)).toBe(20)});
   it("aggregates only completed workouts",()=>{const result=aggregatePeriod([workout,{...workout,id:"draft",status:"draft"}]);expect(result).toMatchObject({workouts:1,daysTrained:1,sets:1,repetitions:10,volume:1000,exerciseCount:1})});
   it("produces a truthful empty-period summary",()=>expect(buildPerformanceSummary(aggregatePeriod([]))).toContain("No completed workouts"));
+  it("compares the latest exercise weight with its previous occurrence",()=>{const newer={...workout,id:"newer",performedAt:"2026-10-13T12:00:00.000Z",exercises:[{...workout.exercises[0],sets:[set({weight:110})]}]};expect(buildLatestExerciseComparisons([workout,newer])[0]).toMatchObject({exerciseName:"Bench Press",currentWeight:110,previousWeight:100,difference:10,direction:"increase"})});
 });

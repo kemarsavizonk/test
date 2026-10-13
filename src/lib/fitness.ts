@@ -1,5 +1,5 @@
 import { KG_TO_LB } from "@/lib/constants";
-import type { PeriodMetrics, WeightUnit, WorkoutExercise, WorkoutSession, WorkoutSet } from "@/lib/types";
+import type { ExerciseComparison, PeriodMetrics, WeightUnit, WorkoutExercise, WorkoutSession, WorkoutSet } from "@/lib/types";
 
 export function normalizeExerciseName(name: string) {
   return name.trim().replace(/\s+/g, " ").toLocaleLowerCase();
@@ -93,6 +93,38 @@ export function buildPerformanceSummary(current: PeriodMetrics, previous?: Perio
     ? "Comparable training-volume data is not yet available."
     : `Recorded weighted volume ${volumeDelta >= 0 ? "increased" : "decreased"} by ${Math.abs(volumeDelta).toFixed(1)}%.`;
   return `${base} ${workoutPhrase} ${volumePhrase}`;
+}
+
+export function buildLatestExerciseComparisons(workouts: WorkoutSession[]): ExerciseComparison[] {
+  const occurrences = new Map<string, { name: string; weight: number; date: string }[]>();
+  [...workouts]
+    .filter((workout) => workout.status === "completed")
+    .sort((a, b) => new Date(b.performedAt).getTime() - new Date(a.performedAt).getTime())
+    .forEach((workout) => workout.exercises.forEach((exercise) => {
+      const weight = maximumWeight(exercise);
+      if (weight == null) return;
+      const key = normalizeExerciseName(exercise.name);
+      const history = occurrences.get(key) ?? [];
+      if (history.length < 2) history.push({ name: exercise.name, weight, date: workout.performedAt });
+      occurrences.set(key, history);
+    }));
+
+  return [...occurrences.values()]
+    .filter((history) => history.length === 2)
+    .map(([current, previous]) => {
+      const difference = current.weight - previous.weight;
+      return {
+        exerciseName: current.name,
+        currentWeight: current.weight,
+        previousWeight: previous.weight,
+        difference,
+        percentage: percentageChange(current.weight, previous.weight),
+        direction: difference > 0 ? "increase" as const : difference < 0 ? "decrease" as const : "no-change" as const,
+        currentDate: current.date,
+        previousDate: previous.date,
+      };
+    })
+    .sort((a, b) => new Date(b.currentDate).getTime() - new Date(a.currentDate).getTime());
 }
 
 export function formatWeight(value: number, unit: WeightUnit) {

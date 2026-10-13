@@ -67,3 +67,14 @@ export interface PeriodMetrics {
   volume: number;
   exerciseCount: number;
 }
+
+export interface ExerciseComparison {
+  exerciseName: string;
+  currentWeight: number;
+  previousWeight: number;
+  difference: number;
+  percentage: number | null;
+  direction: "increase" | "decrease" | "no-change";
+  currentDate: string;
+  previousDate: string;
+}

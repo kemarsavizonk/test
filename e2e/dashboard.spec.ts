@@ -2,6 +2,30 @@ import { expect, test } from "@playwright/test";
 
 test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
 
+test("mobile menu stays above the date picker and all options remain tappable", async ({ page }) => {
+  await page.goto("/dashboard");
+  for (const viewport of [{ width: 390, height: 844 }, { width: 320, height: 568 }]) {
+    await page.setViewportSize(viewport);
+    await page.getByRole("button", { name: "Choose training date", exact: true }).click();
+    await page.getByRole("button", { name: "Open navigation", exact: true }).click();
+    const menu = page.getByRole("navigation", { name: "Mobile menu" });
+    await expect(menu).toBeVisible();
+    for (const label of ["Dashboard", "Log workout", "History", "Exercises", "Reports", "Achievements", "Me", "Install Kemtech"]) {
+      // Trial clicks perform hit-testing without navigating away.
+      await menu.getByRole("link", { name: label, exact: true }).click({ trial: true });
+    }
+    await menu.getByRole("button", { name: "Log out", exact: true }).click({ trial: true });
+    await page.getByRole("button", { name: "Close navigation", exact: true }).click();
+    await expect(menu).toHaveCount(0);
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "Open navigation", exact: true }).click();
+  await page.screenshot({ path: "/private/tmp/kemtech-mobile-menu.png" });
+  await page.getByRole("navigation", { name: "Mobile menu" }).getByRole("link", { name: "History", exact: true }).click();
+  await expect(page).toHaveURL(/\/dashboard\/workouts$/);
+  await expect(page.getByRole("navigation", { name: "Mobile menu" })).toHaveCount(0);
+});
+
 test("custom exercise creation resets after navigating away and supports adding several in succession", async ({ page }) => {
   await page.goto("/dashboard/workouts/new");
   const addCustom = () => page.getByRole("link", { name: "Add custom exercise", exact: true });

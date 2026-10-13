@@ -35,14 +35,19 @@ export async function listExerciseCatalog(): Promise<CatalogExercise[]> {
     } catch { /* The preset and saved custom catalog remain available. */ }
     for (const item of readLocal()) catalog.set(normalizeExerciseName(item.name), item);
   } else {
-    const { data, error } = await client.from("exercises")
-      .select("id, user_id, name, equipment_type, muscle_groups(name)")
-      .eq("is_archived", false).order("name");
-    if (error) throw error;
-    for (const row of (data ?? []) as unknown as { id: string; user_id: string | null; name: string; equipment_type: string | null; muscle_groups: { name: string } | null }[]) {
-      const key = normalizeExerciseName(row.name);
-      const preset = catalog.get(key);
-      catalog.set(key, { id: row.id, name: preset?.name ?? row.name, muscleGroup: preset?.muscleGroup ?? row.muscle_groups?.name ?? "Chest", equipment: preset?.equipment ?? row.equipment_type ?? undefined, isCustom: row.user_id === user.id && !preset });
+    const pageSize = 200;
+    for (let offset = 0; ; offset += pageSize) {
+      const { data, error } = await client.from("exercises")
+        .select("id, user_id, name, equipment_type, muscle_groups(name)")
+        .eq("is_archived", false).order("name").order("id").range(offset, offset + pageSize - 1);
+      if (error) throw error;
+      const rows = (data ?? []) as unknown as { id: string; user_id: string | null; name: string; equipment_type: string | null; muscle_groups: { name: string } | null }[];
+      for (const row of rows) {
+        const key = normalizeExerciseName(row.name);
+        const preset = catalog.get(key);
+        catalog.set(key, { id: row.id, name: preset?.name ?? row.name, muscleGroup: preset?.muscleGroup ?? row.muscle_groups?.name ?? "Chest", equipment: preset?.equipment ?? row.equipment_type ?? undefined, isCustom: row.user_id === user.id && !preset });
+      }
+      if (rows.length < pageSize) break;
     }
   }
   return [...catalog.values()].sort((a, b) => a.name.localeCompare(b.name));

@@ -45,8 +45,8 @@ test("a custom exercise is saved to the profile, found in the logger, and logged
   const search = page.getByRole("combobox", { name: /^Exercise / });
   await search.fill("Cable Press /");
   await page.getByRole("listbox").getByRole("option", { name: /Cable Press \/ Rotation/ }).click();
-  await expect(page.getByLabel("Muscle group", { exact: false })).toHaveValue("Core and Abs");
-  await expect(page.getByLabel("Equipment", { exact: false })).toHaveValue("Cable machine");
+  await expect(page.getByRole("combobox", { name: /^Muscle group/ })).toHaveValue("Core and Abs");
+  await expect(page.getByRole("textbox", { name: /^Equipment/ })).toHaveValue("Cable machine");
   await page.getByLabel("Set 1 weight", { exact: true }).fill("30");
   await page.getByLabel("Set 1 repetitions").fill("10");
   await page.getByRole("button", { name: "Finish", exact: true }).first().click();

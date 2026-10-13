@@ -1,13 +1,14 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, CalendarDays, Dumbbell, Layers3, Pencil, Plus, Scale } from "lucide-react";
+import { ArrowLeft, ArrowRight, Award, BarChart3, CalendarDays, ChevronRight, Dumbbell, Layers3, Pencil, Plus, Repeat2 } from "lucide-react";
 import Link from "next/link";
 import { addDays, addMonths, addWeeks, addYears, endOfDay, endOfMonth, endOfWeek, endOfYear, format, isWithinInterval, startOfDay, startOfMonth, startOfWeek, startOfYear } from "date-fns";
-import { useState } from "react";
-import { Badge, Button, Card, EmptyState, PageHeader } from "@/components/ui";
-import { StatCard } from "@/components/stat-card";
+import { useCallback, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
+import { Badge, Button, Card, EmptyState } from "@/components/ui";
+import { TrainingCalendar } from "@/components/training-calendar";
 import { WeightDisplay } from "@/components/weight-display";
-import { aggregatePeriod, exerciseVolume, normalizeExerciseName } from "@/lib/fitness";
+import { useAchievements } from "@/components/achievement-provider";
+import { aggregatePeriod, exerciseVolume, maximumWeight, normalizeExerciseName } from "@/lib/fitness";
 import { exerciseHistoryUrl } from "@/lib/exercise-history";
 import { formatNumber } from "@/lib/utils";
 import { useWorkouts } from "@/hooks/use-workouts";
@@ -28,28 +29,70 @@ function moveDate(date: Date, period: Period, amount: number) {
   return addDays(date, amount);
 }
 
+const getToday = () => format(new Date(), "yyyy-MM-dd");
+function subscribeToDate(callback: () => void) {
+  const timer = window.setInterval(callback, 60_000);
+  window.addEventListener("focus", callback);
+  return () => { window.clearInterval(timer); window.removeEventListener("focus", callback); };
+}
+
 export default function DashboardPage() {
   const { workouts, unit, loading, error } = useWorkouts();
+  const { achievements, unreadCount } = useAchievements();
+  const today = useSyncExternalStore(subscribeToDate, getToday, () => "");
   const [period, setPeriod] = useState<Period>("day");
-  const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [chosenDate, setChosenDate] = useState("");
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const dateTrigger = useRef<HTMLButtonElement>(null);
+  const selectedDate = chosenDate || today || "2000-01-03";
   const anchor = new Date(`${selectedDate}T12:00:00`);
   const interval = getInterval(anchor, period);
-  const selectedWorkouts = workouts.filter((workout) => isWithinInterval(new Date(workout.performedAt), interval));
+  const selectedWorkouts = workouts.filter((workout) => isWithinInterval(new Date(workout.performedAt), interval))
+    .sort((a, b) => new Date(b.performedAt).getTime() - new Date(a.performedAt).getTime());
   const metrics = aggregatePeriod(selectedWorkouts);
-  const periodLabel = period === "day" ? format(anchor, "EEEE, MMMM d, yyyy") : `${format(interval.start, "MMM d, yyyy")} – ${format(interval.end, "MMM d, yyyy")}`;
-  const navigate = (amount: number) => setSelectedDate(format(moveDate(anchor, period, amount), "yyyy-MM-dd"));
+  const periodLabel = period === "day" ? format(anchor, "EEEE, MMMM d, yyyy") : period === "month" ? format(anchor, "MMMM yyyy") : period === "year" ? format(anchor, "yyyy") : `${format(interval.start, "MMM d")} – ${format(interval.end, "MMM d, yyyy")}`;
+  const dateLabel = period === "day" && (!chosenDate || selectedDate === today) ? "Today" : period === "day" ? format(anchor, "EEE, MMM d") : periodLabel;
+  const trainingDates = new Set(workouts.filter((workout) => workout.status === "completed").map((workout) => format(new Date(workout.performedAt), "yyyy-MM-dd")));
+  const weekStart = startOfWeek(anchor, { weekStartsOn: 1 });
+  const week = Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
+  const entries = selectedWorkouts.flatMap((workout) => workout.exercises.map((exercise) => ({ workout, exercise })));
+  const closeCalendar = useCallback(() => { setCalendarOpen(false); dateTrigger.current?.focus(); }, []);
+  const selectDate = (date: string) => { setChosenDate(date === getToday() ? "" : date); closeCalendar(); };
+  const navigate = (amount: number) => { setChosenDate(format(moveDate(anchor, period, amount), "yyyy-MM-dd")); setCalendarOpen(false); };
+  useLayoutEffect(() => () => setCalendarOpen(false), []);
 
-  return <div className="app-page"><PageHeader eyebrow="Overview" title="Your training dashboard" description="Review your entries by day, week, month, or year." action={<Link href="/dashboard/workouts/new" className="btn btn-primary"><Plus size={18} /> Log workout</Link>} />
-    {error && <div role="alert" style={{ padding: 14, borderRadius: 11, background: "#fef2f2", color: "#b91c1c", marginBottom: 20 }}>{error}</div>}
-    <Card style={{ padding: 16, marginBottom: 20 }}><div className="dashboard-date-controls">
-      <div style={{ display: "flex", gap: 8 }}><Button variant="secondary" aria-label={`Previous ${period}`} onClick={() => navigate(-1)}><ArrowLeft size={17} /></Button><Button variant="secondary" onClick={() => setSelectedDate(format(new Date(), "yyyy-MM-dd"))}>Today</Button><Button variant="secondary" aria-label={`Next ${period}`} onClick={() => navigate(1)}><ArrowRight size={17} /></Button></div>
-      <strong style={{ textAlign: "center" }}>{periodLabel}</strong>
-      <div style={{ display: "flex", gap: 8 }}><input className="input" aria-label="Choose date" type="date" value={selectedDate} onChange={(event) => setSelectedDate(event.target.value)} style={{ width: 150 }} /><select className="input" aria-label="Choose dashboard period" value={period} onChange={(event) => setPeriod(event.target.value as Period)} style={{ width: 122 }}><option value="day">Day</option><option value="week">Week</option><option value="month">Month</option><option value="year">Year</option></select></div>
-    </div></Card>
-    <div className="grid-auto" style={{ marginBottom: 22 }}><StatCard label={`Workouts this ${period}`} value={String(metrics.workouts)} detail="Completed sessions" icon={Dumbbell} /><StatCard label="Working sets" value={formatNumber(metrics.sets)} detail="Warm-ups excluded" icon={Layers3} /><StatCard label="Training volume" value={<WeightDisplay value={metrics.volume} unit={unit} />} detail="Weight × repetitions" icon={Scale} /><StatCard label="Days trained" value={String(metrics.daysTrained)} detail={`In this ${period}`} icon={CalendarDays} /></div>
-    <Card><div style={{ padding: "21px 22px", borderBottom: "1px solid #e2e8f0" }}><h2 style={{ fontSize: 18, margin: 0 }}>{period === "day" ? "Entries for this day" : `Entries for this ${period}`}</h2><p className="muted" style={{ fontSize: 13, margin: "5px 0 0" }}>{periodLabel}</p></div>
-      {loading ? <div style={{ padding: 35 }} className="muted">Loading your training history…</div> : selectedWorkouts.length === 0 ? <EmptyState icon={<Dumbbell />} title={`No workouts recorded for this ${period}`} description="Choose another date or add a workout for this period." action={<Link href="/dashboard/workouts/new" className="btn btn-primary">Add workout</Link>} /> : <div>{selectedWorkouts.flatMap(workout => workout.exercises.map(exercise => <article key={`${workout.id}:${exercise.id}`} className="dashboard-entry"><span style={{ width: 42, height: 42, display: "grid", placeItems: "center", background: "#eff4ff", color: "#1642bb", borderRadius: 12 }}><Dumbbell size={19} /></span><span><Link href={exerciseHistoryUrl(normalizeExerciseName(exercise.name))}><strong style={{ display: "block", marginBottom: 4 }}>{exercise.name}</strong></Link><span className="muted" style={{ fontSize: 12 }}>{format(new Date(workout.performedAt), "MMM d, yyyy · h:mm a")} · {exercise.sets.length} sets · <WeightDisplay value={exerciseVolume(exercise)} unit={unit} compact /></span></span><span style={{ display: "flex", alignItems: "center", gap: 8 }}><Badge tone={workout.status === "completed" ? "green" : "gray"}>{workout.status}</Badge><Link href={`/dashboard/workouts/${workout.id}/edit`} className="btn btn-ghost" aria-label={`Edit ${exercise.name}`} style={{ minHeight: 36, padding: 8 }}><Pencil size={17} /></Link></span></article>))}</div>}
-    </Card>
-    <style jsx>{`.dashboard-date-controls{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:14px}.dashboard-date-controls>div:last-child{justify-self:end}.dashboard-entry{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:14px;align-items:center;padding:17px 22px;border-bottom:1px solid #edf0f5}@media(max-width:760px){.dashboard-date-controls{grid-template-columns:1fr}.dashboard-date-controls>div,.dashboard-date-controls>div:last-child{justify-self:center}.dashboard-entry{grid-template-columns:42px minmax(0,1fr)}.dashboard-entry>span:last-child{grid-column:2;justify-self:start}}`}</style>
+  return <div className="app-page dashboard-page">
+    <header className="dashboard-page-header"><div><div className="eyebrow">Your fitness, at a glance</div><h1>Your training dashboard</h1></div><Link href="/dashboard/workouts/new" aria-label="Log workout" className="btn btn-primary dashboard-log-button"><Plus size={20} /><span>Log workout</span></Link></header>
+    {error && <div className="logger-error" role="alert">{error}</div>}
+    <div className="dashboard-date-picker">
+      <div className="dashboard-date-bar"><Button variant="ghost" aria-label={`Previous ${period}`} onClick={() => navigate(-1)}><ArrowLeft size={19} /></Button><button ref={dateTrigger} className="dashboard-date-trigger" aria-label="Choose training date" aria-expanded={calendarOpen} aria-haspopup="dialog" onClick={() => setCalendarOpen((open) => !open)}><CalendarDays size={20} /><span>{dateLabel}</span></button><Button variant="ghost" aria-label={`Next ${period}`} onClick={() => navigate(1)}><ArrowRight size={19} /></Button></div>
+      {calendarOpen && <TrainingCalendar selectedDate={selectedDate} trainingDates={trainingDates} onSelect={selectDate} onClose={closeCalendar} />}
+    </div>
+    <div className="dashboard-period-tabs" role="group" aria-label="Dashboard time period">{(["day", "week", "month", "year"] as Period[]).map((item) => <button key={item} type="button" aria-pressed={period === item} onClick={() => { setPeriod(item); setCalendarOpen(false); }}>{item[0].toUpperCase() + item.slice(1)}</button>)}</div>
+
+    <section className="dashboard-summary" aria-label="Training summary">
+      <div className="dashboard-summary-heading"><div><span className="dashboard-summary-eyebrow">Completed training</span><h2>{period === "day" ? "Your day in strength" : `Your ${period} in strength`}</h2></div><span className="dashboard-summary-mark"><Dumbbell size={23} /></span></div>
+      <div className="dashboard-summary-main">
+        <div className="dashboard-summary-side"><div><Dumbbell size={18} /><strong>{loading ? "—" : metrics.workouts}</strong><span>Workouts</span></div><div><Layers3 size={18} /><strong>{loading ? "—" : formatNumber(metrics.sets)}</strong><span>Working sets</span></div></div>
+        <div className="dashboard-volume-orbit"><span>Training volume</span><strong>{loading ? "—" : <WeightDisplay value={metrics.volume} unit={unit} />}</strong><small>Weight × reps</small></div>
+        <div className="dashboard-summary-side"><div><Repeat2 size={18} /><strong>{loading ? "—" : formatNumber(metrics.repetitions)}</strong><span>Total reps</span></div><div><Layers3 size={18} /><strong>{loading ? "—" : metrics.exerciseCount}</strong><span>Exercises</span></div></div>
+      </div>
+      <div className="dashboard-summary-footer"><span><CalendarDays size={15} /> {metrics.daysTrained} day{metrics.daysTrained === 1 ? "" : "s"} trained</span><span>Warm-ups excluded</span></div>
+    </section>
+
+
+
+    <div className="dashboard-main-grid">
+      <section className="dashboard-entries"><div className="dashboard-section-heading"><div><h2>{period === "day" ? "Your exercises" : `Exercises this ${period}`}</h2><p>{today ? periodLabel : "Loading your date…"}</p></div><Link href="/dashboard/workouts">History <ChevronRight size={16} /></Link></div>
+        {loading ? <Card><p className="dashboard-loading muted">Loading your entries…</p></Card> : entries.length === 0 ? <Card><EmptyState icon={<Dumbbell />} title={`No workouts recorded for this ${period}`} description="Pick another date or record your first exercise for this period." action={<Link href="/dashboard/workouts/new" className="btn btn-primary"><Plus size={17} /> Add workout</Link>} /></Card> : <div className="dashboard-entry-cards">{entries.map(({ workout, exercise }) => {
+          const topWeight = maximumWeight(exercise);
+          return <Card key={`${workout.id}:${exercise.id}`} className="dashboard-exercise-card"><Link href={exerciseHistoryUrl(normalizeExerciseName(exercise.name))} className="dashboard-exercise-main"><span className="dashboard-exercise-icon"><Dumbbell size={20} /></span><div><h3>{exercise.name}</h3><p>{exercise.muscleGroup}{exercise.equipment ? ` · ${exercise.equipment}` : ""}</p></div><ChevronRight size={19} /></Link><div className="dashboard-exercise-metrics"><div><span>Top weight</span><strong>{topWeight == null ? "—" : <WeightDisplay value={topWeight} unit={unit} />}</strong></div><div><span>Working volume</span><strong><WeightDisplay value={exerciseVolume(exercise)} unit={unit} /></strong></div></div><div className="dashboard-exercise-footer"><div><Badge tone={workout.status === "completed" ? "green" : "gray"}>{workout.status}</Badge><span>{exercise.sets.length} sets · {format(new Date(workout.performedAt), period === "day" ? "h:mm a" : "MMM d")}</span></div><Link href={`/dashboard/workouts/${workout.id}/edit`} className="btn btn-ghost" aria-label={`Edit ${exercise.name}`}><Pencil size={17} /></Link></div></Card>;
+        })}</div>}
+      </section>
+      <aside className="dashboard-highlights"><div className="dashboard-section-heading"><h2>Your progress</h2></div><div className="dashboard-progress-cards"><Link href="/dashboard/achievements" className="card dashboard-progress-card"><span className="dashboard-progress-icon gold"><Award size={25} /></span><div><strong>{achievements.length} personal best{achievements.length === 1 ? "" : "s"}</strong><p>{unreadCount ? `${unreadCount} new achievement${unreadCount === 1 ? "" : "s"} to celebrate` : "Every stronger lift, in one place"}</p></div><ChevronRight size={18} /></Link><Link href="/dashboard/reports" className="card dashboard-progress-card"><span className="dashboard-progress-icon"><BarChart3 size={25} /></span><div><strong>Performance reports</strong><p>See how your lifts are changing</p></div><ChevronRight size={18} /></Link></div><Card className="dashboard-week"><div className="dashboard-section-heading"><h2>Training rhythm</h2><span>Week of {today ? format(weekStart, "MMM d") : "—"}</span></div><div className="dashboard-week-days">{week.map((date) => {
+      const key = format(date, "yyyy-MM-dd");
+      return <button key={key} type="button" aria-label={`View ${format(date, "EEEE, MMMM d, yyyy")}`} aria-pressed={selectedDate === key} onClick={() => { setPeriod("day"); setChosenDate(key === getToday() ? "" : key); }}><span>{format(date, "EEEEE")}</span><strong>{today ? format(date, "d") : "—"}</strong><i className={trainingDates.has(key) ? "trained" : ""} aria-label={trainingDates.has(key) ? "Workout logged" : "No completed workout"} /></button>;
+    })}</div></Card></aside>
+    </div>
   </div>;
 }

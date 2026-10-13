@@ -9,10 +9,11 @@ beforeEach(() => { localStorage.clear(); client.current = null; });
 describe("custom exercise storage", () => {
   it("persists an authenticated custom exercise under the current user's account", async () => {
     const insert = vi.fn(() => ({ select: () => ({ single: async () => ({ data: { id: "private-exercise" }, error: null }) }) }));
+    const query = { eq: () => query, order: () => query, range: async () => ({ data: [], error: null }) };
     client.current = {
       auth: { getUser: async () => ({ data: { user: { id: "owner-id" } } }) },
       from: (table: string) => table === "exercises" ? {
-        select: () => ({ eq: () => ({ order: async () => ({ data: [], error: null }) }) }),
+        select: () => query,
         insert,
       } : { select: () => ({ eq: () => ({ limit: () => ({ maybeSingle: async () => ({ data: { id: "group-id" }, error: null }) }) }) }) },
     };
@@ -25,5 +26,15 @@ describe("custom exercise storage", () => {
     await createCustomExercise({ name: "Custom Cable Rotation", muscleGroup: "Core and Abs" });
     expect((await listExerciseCatalog()).find((item) => item.name === "Custom Cable Rotation")).toMatchObject({ muscleGroup: "Core and Abs", isCustom: true });
     await expect(createCustomExercise({ name: " barbell   BACK squat ", muscleGroup: "Quadriceps" })).rejects.toThrow("already exists");
+  });
+  it("loads custom exercises beyond the first database page", async () => {
+    const rows = Array.from({ length: 201 }, (_, index) => ({ id: `custom-${index}`, user_id: "owner-id", name: `Custom exercise ${index}`, equipment_type: "Cable", muscle_groups: { name: "Core and Abs" } }));
+    const range = vi.fn(async (start: number, end: number) => ({ data: rows.slice(start, end + 1), error: null }));
+    const query = { eq: () => query, order: () => query, range };
+    client.current = { auth: { getUser: async () => ({ data: { user: { id: "owner-id" } } }) }, from: () => ({ select: () => query }) };
+    const catalog = await listExerciseCatalog();
+    expect(catalog.filter((item) => item.isCustom)).toHaveLength(201);
+    expect(catalog.some((item) => item.name === "Custom exercise 200")).toBe(true);
+    expect(range).toHaveBeenCalledWith(200, 399);
   });
 });

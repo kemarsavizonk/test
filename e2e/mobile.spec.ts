@@ -41,7 +41,7 @@ test("mobile exercise search narrows and a workout can be saved without sideways
   await page.getByRole("button", { name: "Add set", exact: true }).click();
   await expect(page.getByLabel("Set 2 weight", { exact: true })).toHaveValue("60");
   await page.screenshot({ path: "/private/tmp/kemtech-mobile-logger.png", fullPage: true });
-  await page.getByRole("button", { name: "Finish workout", exact: true }).last().click();
+  await page.getByRole("button", { name: "Finish", exact: true }).last().click();
   await expect(page).toHaveURL(/\/dashboard\/workouts$/);
   await expect(page.getByRole("heading", { name: "Barbell Back Squat", exact: true })).toBeVisible();
 });
@@ -65,7 +65,7 @@ test("unread achievements clear on opening, remain new for that visit, and stay 
   await page.getByRole("combobox", { name: /^Exercise / }).fill("Barbell Back Squat");
   await page.getByLabel("Set 1 weight", { exact: true }).fill("60");
   await page.getByLabel("Set 1 repetitions").fill("10");
-  await page.getByRole("button", { name: "Finish workout", exact: true }).first().click();
+  await page.getByRole("button", { name: "Finish", exact: true }).first().click();
   await expect(page).toHaveURL(/\/dashboard\/workouts$/);
   await expect(mobileTab.getByLabel("1 unread achievement", { exact: true })).toBeVisible();
   await mobileTab.click();

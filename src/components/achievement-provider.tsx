@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
+import { APP_REFRESH, type AppRefreshEvent } from "@/lib/app-refresh";
 import { buildPersonalBestAchievements } from "@/lib/fitness";
 import { achievementNotificationKey, unreadAchievementKeys } from "@/lib/achievement-notifications";
 import { getCurrentUser, getPreferredWeightUnit, listWorkouts, WORKOUTS_CHANGED } from "@/lib/workout-repository";
@@ -71,14 +72,17 @@ export function AchievementProvider({ children }: { children: React.ReactNode })
       }
     };
     const update = () => { void refresh(); };
+    const appRefresh = (event: Event) => (event as AppRefreshEvent).detail.waitUntil(refresh());
     const onStorage = (event: StorageEvent) => { if (event.key?.startsWith("kemtech-")) update(); };
     const onFocus = () => { if (document.visibilityState === "visible") update(); };
     update();
+    window.addEventListener(APP_REFRESH, appRefresh);
     window.addEventListener(WORKOUTS_CHANGED, update);
     window.addEventListener("storage", onStorage);
     window.addEventListener("focus", onFocus);
     return () => {
       active = false;
+      window.removeEventListener(APP_REFRESH, appRefresh);
       window.removeEventListener(WORKOUTS_CHANGED, update);
       window.removeEventListener("storage", onStorage);
       window.removeEventListener("focus", onFocus);

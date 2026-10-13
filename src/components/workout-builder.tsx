@@ -88,9 +88,9 @@ export function WorkoutBuilder({ initialWorkout, initialUnit }: { initialWorkout
   };
 
   const actions = <div className="logger-actions">
-    <Button variant="ghost" disabled={saving} onClick={discard}><X size={17} /> Discard & close</Button>
+    <Button variant="secondary" className="logger-discard" disabled={saving} onClick={discard}><X size={17} /> Discard</Button>
     <Button variant="secondary" disabled={saving} onClick={() => void submit("draft")}><Save size={17} /> Save draft</Button>
-    <Button disabled={saving} onClick={() => void submit("completed")}><Check size={17} /> {saving ? "Saving…" : initialWorkout ? "Save changes" : "Finish workout"}</Button>
+    <Button disabled={saving} onClick={() => void submit("completed")}><Check size={17} /> {saving ? "Saving…" : initialWorkout ? "Save changes" : "Finish"}</Button>
   </div>;
 
   return <div className="app-page workout-builder">
@@ -165,7 +165,7 @@ export function WorkoutBuilder({ initialWorkout, initialUnit }: { initialWorkout
         <div><span className="muted">Total sets</span><strong>{totalSets}</strong></div>
         <div><span className="muted">Working volume</span><strong><WeightDisplay value={totalVolume} unit={unit} /></strong></div>
         <p className="muted">Completed working, drop, and failure sets count toward volume.</p>
-        <Button disabled={saving} onClick={() => void submit("completed")}><Dumbbell size={17} /> {saving ? "Saving…" : initialWorkout ? "Save changes" : "Finish workout"}</Button>
+        <Button disabled={saving} onClick={() => void submit("completed")}><Dumbbell size={17} /> {saving ? "Saving…" : initialWorkout ? "Save changes" : "Finish"}</Button>
       </Card></aside>
     </div>
   </div>;

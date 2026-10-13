@@ -69,6 +69,18 @@ Unit tests cover weight conversion, working-volume rules, estimated 1RM, aggrega
 
 Every push to the configured production branch triggers a new Vercel deployment. No service-role key is used by the browser or required by this application.
 
+## Installing Kemtech on a phone
+
+Kemtech includes a standalone web-app manifest and Home Screen icons. On iPhone,
+open the site in Safari, tap Share → Add to Home Screen, enable Open as Web App
+if shown, and tap Add. Launch the Home Screen icon to use Kemtech without browser
+toolbars. Normal links still open in the browser. Android users can choose Install
+app or Add to Home Screen from the browser menu.
+
+In the installed app, pulling down at the top refreshes saved workout and achievement
+data without clearing a workout being edited. This web app requires an internet
+connection for account access and synced data.
+
 ## Calculation rules
 
 - Weight is stored in kilograms in PostgreSQL and converted for display.

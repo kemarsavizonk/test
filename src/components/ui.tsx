@@ -15,8 +15,8 @@ export function Badge({ children, tone = "blue" }: { children: ReactNode; tone?:
 }
 
 export function PageHeader({ eyebrow, title, description, action }: { eyebrow?: string; title: string; description?: string; action?: ReactNode }) {
-  return <header style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 20, marginBottom: 26, flexWrap: "wrap" }}>
-    <div>{eyebrow && <div className="eyebrow" style={{ marginBottom: 7 }}>{eyebrow}</div>}<h1 style={{ margin: 0, fontSize: "clamp(28px, 4vw, 40px)", letterSpacing: "-.045em", lineHeight: 1.08 }}>{title}</h1>{description && <p className="muted" style={{ maxWidth: 650, margin: "9px 0 0", lineHeight: 1.6 }}>{description}</p>}</div>
+  return <header className="page-header" style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 20, marginBottom: 26, flexWrap: "wrap" }}>
+    <div style={{ minWidth: 0 }}>{eyebrow && <div className="eyebrow" style={{ marginBottom: 7 }}>{eyebrow}</div>}<h1 style={{ margin: 0, fontSize: "clamp(28px, 4vw, 40px)", letterSpacing: "-.045em", lineHeight: 1.08 }}>{title}</h1>{description && <p className="muted" style={{ maxWidth: 650, margin: "9px 0 0", lineHeight: 1.6 }}>{description}</p>}</div>
     {action}
   </header>;
 }
@@ -26,5 +26,5 @@ export function EmptyState({ icon, title, description, action }: { icon: ReactNo
 }
 
 export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
-  return <label style={{ display: "grid", gap: 7 }}><span style={{ fontWeight: 750, fontSize: 14 }}>{label}</span>{children}{hint && <span className="muted" style={{ fontSize: 12 }}>{hint}</span>}</label>;
+  return <label style={{ display: "grid", gap: 7, minWidth: 0 }}><span style={{ fontWeight: 750, fontSize: 14 }}>{label}</span>{children}{hint && <span className="muted" style={{ fontSize: 12 }}>{hint}</span>}</label>;
 }

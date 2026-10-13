@@ -87,24 +87,86 @@ export function WorkoutBuilder({ initialWorkout, initialUnit }: { initialWorkout
     }
   };
 
-  return <div className="app-page"><PageHeader eyebrow={initialWorkout ? "Edit workout" : "Workout logger"} title={initialWorkout ? "Correct your session" : "Record your session"} description="Choose approved exercises and capture each set accurately." action={<div style={{ display: "flex", gap: 9, flexWrap: "wrap" }}><Button variant="ghost" disabled={saving} onClick={discard}><X size={17} /> Discard & close</Button><Button variant="secondary" disabled={saving} onClick={() => void submit("draft")}><Save size={17} /> Save draft</Button><Button disabled={saving} onClick={() => void submit("completed")}><Check size={17} /> {initialWorkout ? "Save changes" : "Finish workout"}</Button></div>} />
-    {error && <div role="alert" style={{ padding: 14, borderRadius: 11, background: "#fef2f2", color: "#b91c1c", marginBottom: 20 }}>{error}</div>}
-    <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 300px", gap: 22 }} className="builder-grid"><div style={{ display: "grid", gap: 18 }}>
-      <Card style={{ padding: 22 }}><div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr", gap: 16 }} className="form-grid"><Field label="Date and time"><input className="input" type="datetime-local" value={performedAt} onChange={(event) => setPerformedAt(event.target.value)} /></Field><Field label="Duration (minutes)"><input className="input" type="number" min="1" value={duration} onChange={(event) => setDuration(event.target.value)} placeholder="Optional" /></Field><Field label="Weight entry unit"><select className="input" value={unit} onChange={(event) => changeUnit(event.target.value as WeightUnit)}><option value="lb">Pounds (lb)</option><option value="kg">Kilograms (kg)</option></select></Field></div></Card>
-      {exercises.map((exercise, exerciseIndex) => {
-        const selected = approvedByName.get(exercise.name.trim().toLocaleLowerCase());
-        const query = exercise.name.trim().toLocaleLowerCase();
-        const matches = query ? STARTER_EXERCISES
-          .filter((item) => item.name.toLocaleLowerCase().includes(query))
-          .sort((a, b) => Number(b.name.toLocaleLowerCase().startsWith(query)) - Number(a.name.toLocaleLowerCase().startsWith(query)) || a.name.localeCompare(b.name)) : [];
-        const showSuggestions = activeExerciseId === exercise.id && Boolean(query) && !selected;
-        const optionListId = `exercise-options-${exerciseIndex}`;
-        return <Card key={exercise.id} style={{ overflow: "visible" }}><div style={{ padding: "18px 20px", display: "flex", alignItems: "center", gap: 10, borderBottom: "1px solid #e2e8f0", background: "#fbfcfe", borderRadius: "18px 18px 0 0" }}><GripVertical size={18} color="#94a3b8" /><strong>Exercise {exerciseIndex + 1}</strong><button aria-label="Remove exercise" className="btn btn-ghost" style={{ marginLeft: "auto", minHeight: 36, padding: 8 }} onClick={() => setExercises((items) => items.filter((item) => item.id !== exercise.id))}><Trash2 size={17} /></button></div><div style={{ padding: 20 }}><div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 12, marginBottom: 20 }} className="exercise-fields"><Field label="Exercise" hint={exercise.name && !selected ? "Select an exact exercise from the suggestions." : "Start typing, then choose an approved exercise."}><div className="exercise-combobox"><input className="input" role="combobox" value={exercise.name} onFocus={() => setActiveExerciseId(exercise.id)} onBlur={() => setActiveExerciseId(null)} onChange={(event) => { setActiveExerciseId(exercise.id); chooseKnownExercise(exercise.id, event.target.value); }} placeholder="Start typing an exercise…" autoComplete="off" aria-autocomplete="list" aria-controls={optionListId} aria-expanded={showSuggestions} aria-invalid={Boolean(exercise.name && !selected)} />{showSuggestions && <div id={optionListId} className="exercise-suggestions" role="listbox">{matches.length ? matches.map((item) => <button key={item.name} type="button" role="option" aria-selected="false" className="exercise-option" onPointerDown={(event) => { event.preventDefault(); chooseKnownExercise(exercise.id, item.name); setActiveExerciseId(null); }}><strong>{item.name}</strong><span>{item.muscleGroup} · {item.equipment}</span></button>) : <div className="exercise-empty">No approved exercises found.</div>}</div>}</div></Field><Field label="Muscle group" hint="Auto-filled, but editable"><select className="input" value={exercise.muscleGroup} onChange={(event) => updateExercise(exercise.id, { muscleGroup: event.target.value })}>{MUSCLE_GROUPS.map((group) => <option key={group} value={group}>{group}</option>)}</select></Field><Field label="Equipment" hint="Auto-filled, but editable"><input className="input" value={exercise.equipment ?? ""} onChange={(event) => updateExercise(exercise.id, { equipment: event.target.value })} placeholder="Enter equipment" /></Field></div>
-          <div style={{ overflowX: "auto" }}><div style={{ minWidth: 650 }}><div style={{ display: "grid", gridTemplateColumns: "42px 1fr 1fr 1.2fr .8fr 42px", gap: 9, padding: "0 4px 8px", color: "#64748b", fontSize: 11, fontWeight: 800, letterSpacing: ".05em", textTransform: "uppercase" }}><span>Set</span><span>Weight ({unit})</span><span>Reps</span><span>Type</span><span>RPE</span><span /></div>{exercise.sets.map((set) => <div key={set.id} style={{ display: "grid", gridTemplateColumns: "42px 1fr 1fr 1.2fr .8fr 42px", gap: 9, alignItems: "start", marginBottom: 9 }}><button aria-label={`Mark set ${set.setNumber} complete`} onClick={() => updateSet(exercise.id, set.id, "completed", !set.completed)} style={{ width: 32, height: 32, marginTop: 6, borderRadius: 9, border: `1px solid ${set.completed ? "#1642bb" : "#cbd5e1"}`, background: set.completed ? "#1642bb" : "white", color: set.completed ? "white" : "#64748b", fontWeight: 800 }}>{set.completed ? <Check size={16} style={{ margin: "auto" }} /> : set.setNumber}</button><div><input aria-label={`Set ${set.setNumber} weight`} className="input" type="number" min="0" step="0.5" value={set.weight || ""} onChange={(event) => updateSet(exercise.id, set.id, "weight", event.target.value)} /><small className="muted" style={{ display: "block", marginTop: 4, fontSize: 11 }}>{formatNumber(convertWeight(set.weight, unit, secondaryUnit), 1)} {secondaryUnit}</small></div><input aria-label={`Set ${set.setNumber} repetitions`} className="input" type="number" min="0" value={set.repetitions || ""} onChange={(event) => updateSet(exercise.id, set.id, "repetitions", event.target.value)} /><select aria-label={`Set ${set.setNumber} type`} className="input" value={set.type} onChange={(event) => updateSet(exercise.id, set.id, "type", event.target.value)}>{["warmup", "working", "drop", "failure"].map((type) => <option key={type} value={type}>{type[0].toUpperCase() + type.slice(1)}</option>)}</select><input aria-label={`Set ${set.setNumber} RPE`} className="input" type="number" min="1" max="10" step="0.5" value={set.rpe ?? ""} onChange={(event) => updateSet(exercise.id, set.id, "rpe", event.target.value)} /><button aria-label={`Delete set ${set.setNumber}`} className="btn btn-ghost" style={{ padding: 6, minHeight: 35, marginTop: 5 }} onClick={() => removeSet(exercise.id, set.id)} disabled={exercise.sets.length === 1}><X size={17} /></button></div>)}</div></div>
-          <div style={{ display: "flex", gap: 9, flexWrap: "wrap", marginTop: 13 }}><Button variant="secondary" onClick={() => addSet(exercise.id)}><Plus size={16} /> Add set</Button><Button variant="ghost" onClick={() => { const last = exercise.sets.at(-1); if (last) setExercises((items) => items.map((item) => item.id !== exercise.id ? item : { ...item, sets: [...item.sets, { ...last, id: createId(), setNumber: item.sets.length + 1 }] })); }}><Copy size={16} /> Duplicate last</Button></div><textarea className="input" style={{ minHeight: 72, resize: "vertical", marginTop: 16 }} value={exercise.notes ?? ""} onChange={(event) => updateExercise(exercise.id, { notes: event.target.value })} placeholder="Exercise notes (optional)" /></div></Card>;
-      })}
-      <Button variant="secondary" style={{ borderStyle: "dashed", minHeight: 56 }} onClick={() => setExercises((items) => [...items, newExercise()])}><Plus size={18} /> Add another exercise</Button><Field label="Session notes"><textarea className="input" style={{ minHeight: 100, resize: "vertical" }} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="How did the session feel?" /></Field>
-    </div><aside><Card style={{ padding: 21, position: "sticky", top: 24 }}><div className="eyebrow">Live summary</div><h2 style={{ margin: "9px 0 20px", fontSize: 20 }}>Session totals</h2><div style={{ display: "flex", justifyContent: "space-between", padding: "13px 0", borderBottom: "1px solid #edf0f5" }}><span className="muted">Exercises</span><strong>{exercises.filter((item) => item.name).length}</strong></div><div style={{ display: "flex", justifyContent: "space-between", padding: "13px 0", borderBottom: "1px solid #edf0f5" }}><span className="muted">Total sets</span><strong>{totalSets}</strong></div><div style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "13px 0", borderBottom: "1px solid #edf0f5" }}><span className="muted">Working volume</span><strong style={{ textAlign: "right" }}><WeightDisplay value={totalVolume} unit={unit} /></strong></div><p className="muted" style={{ fontSize: 12, lineHeight: 1.6, margin: "18px 0" }}>Completed working, drop, and failure sets count toward volume. Both units are shown while kilograms remain the canonical stored value.</p><Button style={{ width: "100%" }} disabled={saving} onClick={() => void submit("completed")}><Dumbbell size={17} /> {saving ? "Saving…" : initialWorkout ? "Save changes" : "Finish workout"}</Button></Card></aside></div>
-    <style jsx>{`@media(max-width:1000px){.builder-grid{grid-template-columns:1fr!important}.builder-grid aside{display:none}}@media(max-width:700px){.form-grid,.exercise-fields{grid-template-columns:1fr!important}}`}</style>
+  const actions = <div className="logger-actions">
+    <Button variant="ghost" disabled={saving} onClick={discard}><X size={17} /> Discard & close</Button>
+    <Button variant="secondary" disabled={saving} onClick={() => void submit("draft")}><Save size={17} /> Save draft</Button>
+    <Button disabled={saving} onClick={() => void submit("completed")}><Check size={17} /> {saving ? "Saving…" : initialWorkout ? "Save changes" : "Finish workout"}</Button>
+  </div>;
+
+  return <div className="app-page workout-builder">
+    <PageHeader eyebrow={initialWorkout ? "Edit workout" : "Workout logger"} title={initialWorkout ? "Correct your session" : "Record your session"} description="Choose an exercise, enter your weight and reps, then add more sets." action={actions} />
+    {error && <div className="logger-error" role="alert">{error}</div>}
+    <div className="builder-grid">
+      <div className="builder-content">
+        <Card className="logger-details"><div className="logger-form-grid">
+          <Field label="Date and time"><input className="input" type="datetime-local" value={performedAt} onChange={(event) => setPerformedAt(event.target.value)} /></Field>
+          <Field label="Duration (minutes)"><input className="input" type="number" min="1" inputMode="numeric" value={duration} onChange={(event) => setDuration(event.target.value)} placeholder="Optional" /></Field>
+          <Field label="Weight entry unit"><select className="input" value={unit} onChange={(event) => changeUnit(event.target.value as WeightUnit)}><option value="lb">Pounds (lb)</option><option value="kg">Kilograms (kg)</option></select></Field>
+        </div></Card>
+        {exercises.map((exercise, exerciseIndex) => {
+          const selected = approvedByName.get(exercise.name.trim().toLocaleLowerCase());
+          const query = exercise.name.trim().toLocaleLowerCase();
+          const matches = query ? STARTER_EXERCISES.filter((item) => item.name.toLocaleLowerCase().includes(query))
+            .sort((a, b) => Number(b.name.toLocaleLowerCase().startsWith(query)) - Number(a.name.toLocaleLowerCase().startsWith(query)) || a.name.localeCompare(b.name)) : [];
+          const showSuggestions = activeExerciseId === exercise.id && Boolean(query) && !selected;
+          const optionListId = `exercise-options-${exerciseIndex}`;
+          return <Card key={exercise.id} className="logger-exercise">
+            <div className="logger-exercise-header"><GripVertical size={18} color="#94a3b8" /><strong>Exercise {exerciseIndex + 1}</strong><Button variant="ghost" aria-label="Remove exercise" onClick={() => setExercises((items) => items.filter((item) => item.id !== exercise.id))}><Trash2 size={18} /></Button></div>
+            <div className="logger-exercise-body">
+              <div className="logger-exercise-fields">
+                <Field label="Exercise" hint={exercise.name && !selected ? "Choose an exercise from the suggestions." : "Search the exercise list."}>
+                  <div className="exercise-combobox" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setActiveExerciseId(null); }}>
+                    <input className="input" role="combobox" value={exercise.name} onFocus={() => setActiveExerciseId(exercise.id)}
+                      onChange={(event) => { setActiveExerciseId(exercise.id); chooseKnownExercise(exercise.id, event.target.value); }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Escape") setActiveExerciseId(null);
+                        if (event.key === "ArrowDown" && showSuggestions) { event.preventDefault(); event.currentTarget.parentElement?.querySelector<HTMLButtonElement>(".exercise-option")?.focus(); }
+                      }}
+                      placeholder="Search exercises…" autoComplete="off" aria-autocomplete="list" aria-controls={optionListId} aria-expanded={showSuggestions} aria-invalid={Boolean(exercise.name && !selected)} />
+                    {showSuggestions && <div id={optionListId} className="exercise-suggestions" role="listbox">
+                      {matches.length ? matches.map((item) => <button key={item.name} type="button" role="option" aria-selected="false" className="exercise-option"
+                        onMouseDown={(event) => event.preventDefault()} onClick={() => { chooseKnownExercise(exercise.id, item.name); setActiveExerciseId(null); }}>
+                        <strong>{item.name}</strong><span>{item.muscleGroup} · {item.equipment}</span>
+                      </button>) : <div className="exercise-empty">No approved exercises found.</div>}
+                    </div>}
+                  </div>
+                </Field>
+                <Field label="Muscle group" hint="Change if needed"><select className="input" value={exercise.muscleGroup} onChange={(event) => updateExercise(exercise.id, { muscleGroup: event.target.value })}>{MUSCLE_GROUPS.map((group) => <option key={group} value={group}>{group}</option>)}</select></Field>
+                <Field label="Equipment" hint="Change if needed"><input className="input" value={exercise.equipment ?? ""} onChange={(event) => updateExercise(exercise.id, { equipment: event.target.value })} placeholder="Enter equipment" /></Field>
+              </div>
+              <div className="logger-sets">
+                {exercise.sets.map((set) => <div key={set.id} className="logger-set">
+                  <div className="logger-set-heading"><strong>Set {set.setNumber}</strong>
+                    <button className={set.completed ? "set-complete checked" : "set-complete"} aria-label={`Mark set ${set.setNumber} complete`} aria-pressed={set.completed} onClick={() => updateSet(exercise.id, set.id, "completed", !set.completed)}><Check size={16} />{set.completed ? "Complete" : "Incomplete"}</button>
+                    <Button variant="ghost" className="set-delete" aria-label={`Delete set ${set.setNumber}`} onClick={() => removeSet(exercise.id, set.id)} disabled={exercise.sets.length === 1}><Trash2 size={17} /></Button>
+                  </div>
+                  <div className="logger-set-fields">
+                    <Field label={`Weight (${unit})`}><input aria-label={`Set ${set.setNumber} weight`} className="input" type="number" min="0" step="0.5" inputMode="decimal" value={set.weight || ""} placeholder="0" onChange={(event) => updateSet(exercise.id, set.id, "weight", event.target.value)} /><small className="muted">{formatNumber(convertWeight(set.weight, unit, secondaryUnit), 1)} {secondaryUnit}</small></Field>
+                    <Field label="Reps"><input aria-label={`Set ${set.setNumber} repetitions`} className="input" type="number" min="0" inputMode="numeric" value={set.repetitions || ""} placeholder="0" onChange={(event) => updateSet(exercise.id, set.id, "repetitions", event.target.value)} /></Field>
+                    <Field label="Set type"><select aria-label={`Set ${set.setNumber} type`} className="input" value={set.type} onChange={(event) => updateSet(exercise.id, set.id, "type", event.target.value)}>{["warmup", "working", "drop", "failure"].map((type) => <option key={type} value={type}>{type[0].toUpperCase() + type.slice(1)}</option>)}</select></Field>
+                    <Field label="RPE (optional)"><input aria-label={`Set ${set.setNumber} RPE`} className="input" type="number" min="1" max="10" step="0.5" inputMode="decimal" value={set.rpe ?? ""} placeholder="1–10" onChange={(event) => updateSet(exercise.id, set.id, "rpe", event.target.value)} /></Field>
+                  </div>
+                </div>)}
+              </div>
+              <div className="logger-set-actions"><Button variant="secondary" onClick={() => addSet(exercise.id)}><Plus size={17} /> Add set</Button><Button variant="ghost" onClick={() => {
+                const last = exercise.sets.at(-1);
+                if (last) setExercises((items) => items.map((item) => item.id !== exercise.id ? item : { ...item, sets: [...item.sets, { ...last, id: createId(), setNumber: item.sets.length + 1 }] }));
+              }}><Copy size={17} /> Duplicate last</Button></div>
+              <textarea aria-label={`Exercise ${exerciseIndex + 1} notes`} className="input logger-notes" value={exercise.notes ?? ""} onChange={(event) => updateExercise(exercise.id, { notes: event.target.value })} placeholder="Exercise notes (optional)" />
+            </div>
+          </Card>;
+        })}
+        <Button variant="secondary" className="add-exercise" onClick={() => setExercises((items) => [...items, newExercise()])}><Plus size={18} /> Add another exercise</Button>
+        <Field label="Session notes"><textarea className="input logger-notes" value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="How did the session feel?" /></Field>
+        <Card className="logger-bottom-summary"><div><span className="muted">{exercises.filter((item) => item.name).length} exercises · {totalSets} sets</span><strong><WeightDisplay value={totalVolume} unit={unit} /></strong></div>{actions}</Card>
+      </div>
+      <aside><Card className="logger-summary"><div className="eyebrow">Live summary</div><h2>Session totals</h2>
+        <div><span className="muted">Exercises</span><strong>{exercises.filter((item) => item.name).length}</strong></div>
+        <div><span className="muted">Total sets</span><strong>{totalSets}</strong></div>
+        <div><span className="muted">Working volume</span><strong><WeightDisplay value={totalVolume} unit={unit} /></strong></div>
+        <p className="muted">Completed working, drop, and failure sets count toward volume.</p>
+        <Button disabled={saving} onClick={() => void submit("completed")}><Dumbbell size={17} /> {saving ? "Saving…" : initialWorkout ? "Save changes" : "Finish workout"}</Button>
+      </Card></aside>
+    </div>
   </div>;
 }

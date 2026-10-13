@@ -6,6 +6,9 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { fromCanonicalKg, normalizeExerciseName, toCanonicalKg } from "@/lib/fitness";
 import type { WeightUnit, WorkoutSession } from "@/lib/types";
 
+export const WORKOUTS_CHANGED = "kemtech-workouts-changed";
+const notifyWorkoutsChanged = () => window.dispatchEvent(new Event(WORKOUTS_CHANGED));
+
 const LOCAL_KEY = "kemtech-preview-workouts-v1";
 const APPROVED_EXERCISES = new Set(STARTER_EXERCISES.map((exercise) => normalizeExerciseName(exercise.name)));
 
@@ -201,6 +204,7 @@ export async function saveWorkout(workout: WorkoutSession, displayUnit: WeightUn
     const existing = readLocal();
     const next = [workout, ...existing.filter((item) => item.id !== workout.id)];
     writeLocal(next);
+    notifyWorkoutsChanged();
     return workout;
   }
 
@@ -220,6 +224,7 @@ export async function saveWorkout(workout: WorkoutSession, displayUnit: WeightUn
   if (sessionError) throw sessionError;
 
   await insertWorkoutExercises(supabase, user.id, session.id, workout, displayUnit);
+  notifyWorkoutsChanged();
   return { ...workout, id: session.id };
 }
 
@@ -230,6 +235,7 @@ export async function updateWorkout(workout: WorkoutSession, displayUnit: Weight
   const user = await getCurrentUser();
   if (!supabase || !user) {
     writeLocal([workout, ...readLocal().filter((item) => item.id !== workout.id)]);
+    notifyWorkoutsChanged();
     return workout;
   }
   const { error: sessionError } = await supabase.from("workout_sessions").update({ title: workout.title, performed_at: workout.performedAt, completed_at: workout.completedAt ?? null, status: workout.status, notes: workout.notes ?? null, duration_minutes: workout.durationMinutes ?? null }).eq("id", workout.id).eq("user_id", user.id);
@@ -237,6 +243,7 @@ export async function updateWorkout(workout: WorkoutSession, displayUnit: Weight
   const { error: deleteError } = await supabase.from("workout_exercises").delete().eq("workout_session_id", workout.id);
   if (deleteError) throw deleteError;
   await insertWorkoutExercises(supabase, user.id, workout.id, workout, displayUnit);
+  notifyWorkoutsChanged();
   return workout;
 }
 
@@ -245,8 +252,10 @@ export async function deleteWorkout(id: string) {
   const user = await getCurrentUser();
   if (!supabase || !user) {
     writeLocal(readLocal().filter((item) => item.id !== id));
+    notifyWorkoutsChanged();
     return;
   }
   const { error } = await supabase.from("workout_sessions").delete().eq("id", id);
   if (error) throw error;
+  notifyWorkoutsChanged();
 }

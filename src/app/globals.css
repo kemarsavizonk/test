@@ -55,6 +55,9 @@ textarea:focus-visible {
 .eyebrow { color: var(--brand); font-size: 12px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
 .muted { color: var(--muted); }
 .grid-auto { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; }
+.dual-weight { display: inline-flex; flex-direction: column; align-items: inherit; line-height: 1.2; }
+.dual-weight small { margin-top: 3px; color: var(--muted); font-size: .68em; font-weight: 650; }
+.dual-weight.compact { display: inline-flex; margin-left: 4px; vertical-align: middle; }
 .mobile-tab-bar { position: fixed; inset: auto 0 0 0; height: 76px; padding: 8px max(12px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); display: flex; align-items: center; justify-content: space-around; gap: 4px; background: rgba(255,255,255,.97); border-top: 1px solid var(--line); box-shadow: 0 -8px 28px rgba(15,23,42,.08); z-index: 60; }
 .mobile-tab { min-width: 64px; min-height: 54px; display: grid; place-items: center; align-content: center; gap: 3px; color: #64748b; font-size: 10px; font-weight: 750; border-radius: 12px; }
 .mobile-tab.active { color: var(--brand); background: var(--brand-pale); }

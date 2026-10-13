@@ -1,19 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { listWorkouts } from "@/lib/workout-repository";
-import type { WorkoutSession } from "@/lib/types";
+import { getPreferredWeightUnit, listWorkouts } from "@/lib/workout-repository";
+import type { WeightUnit, WorkoutSession } from "@/lib/types";
 
 export function useWorkouts() {
-  const [workouts, setWorkouts] = useState<WorkoutSession[]>([]); const [loading, setLoading] = useState(true); const [error, setError] = useState("");
-  const refresh = useCallback(async () => { try { setLoading(true); setWorkouts(await listWorkouts()); setError(""); } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not load workouts."); } finally { setLoading(false); } }, []);
+  const [workouts, setWorkouts] = useState<WorkoutSession[]>([]); const [unit, setUnit] = useState<WeightUnit>("lb"); const [loading, setLoading] = useState(true); const [error, setError] = useState("");
+  const refresh = useCallback(async () => { try { setLoading(true); const [items, preferredUnit] = await Promise.all([listWorkouts(), getPreferredWeightUnit()]); setWorkouts(items); setUnit(preferredUnit); setError(""); } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not load workouts."); } finally { setLoading(false); } }, []);
   useEffect(() => {
     let active = true;
-    listWorkouts()
-      .then((items) => { if (active) { setWorkouts(items); setError(""); } })
+    Promise.all([listWorkouts(), getPreferredWeightUnit()])
+      .then(([items, preferredUnit]) => { if (active) { setWorkouts(items); setUnit(preferredUnit); setError(""); } })
       .catch((cause: unknown) => { if (active) setError(cause instanceof Error ? cause.message : "Could not load workouts."); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, []);
-  return { workouts, loading, error, refresh };
+  return { workouts, unit, loading, error, refresh };
 }

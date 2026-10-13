@@ -1,11 +1,13 @@
 "use client";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { STARTER_EXERCISES } from "@/lib/constants";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { fromCanonicalKg, normalizeExerciseName, toCanonicalKg } from "@/lib/fitness";
 import type { WeightUnit, WorkoutSession } from "@/lib/types";
 
 const LOCAL_KEY = "kemtech-preview-workouts-v1";
+const APPROVED_EXERCISES = new Set(STARTER_EXERCISES.map((exercise) => normalizeExerciseName(exercise.name)));
 
 interface DatabaseSet {
   id: string;
@@ -74,10 +76,16 @@ export async function getPreferredWeightUnit(): Promise<WeightUnit> {
 async function insertWorkoutExercises(supabase: SupabaseClient, userId: string, sessionId: string, workout: WorkoutSession, displayUnit: WeightUnit) {
   for (const [sortOrder, item] of workout.exercises.entries()) {
     const normalizedName = normalizeExerciseName(item.name);
+    if (!APPROVED_EXERCISES.has(normalizedName)) throw new Error(`“${item.name}” is not in the approved exercise list.`);
     let { data: exercise } = await supabase.from("exercises").select("id").eq("normalized_name", normalizedName).or(`user_id.eq.${userId},user_id.is.null`).limit(1).maybeSingle();
     if (!exercise) {
-      const { data: muscleGroup } = await supabase.from("muscle_groups").select("id").eq("name", item.muscleGroup).or(`user_id.eq.${userId},user_id.is.null`).limit(1).maybeSingle();
-      const result = await supabase.from("exercises").insert({ user_id: userId, name: item.name, normalized_name: normalizedName, primary_muscle_group_id: muscleGroup?.id ?? null, equipment_type: item.equipment ?? null }).select("id").single();
+      let { data: muscleGroup } = await supabase.from("muscle_groups").select("id").eq("name", item.muscleGroup).or(`user_id.eq.${userId},user_id.is.null`).limit(1).maybeSingle();
+      if (!muscleGroup) {
+        const groupResult = await supabase.from("muscle_groups").insert({ user_id: userId, name: item.muscleGroup }).select("id").single();
+        if (groupResult.error) throw groupResult.error;
+        muscleGroup = groupResult.data;
+      }
+      const result = await supabase.from("exercises").insert({ user_id: userId, name: item.name, normalized_name: normalizedName, primary_muscle_group_id: muscleGroup.id, equipment_type: item.equipment ?? null }).select("id").single();
       if (result.error) throw result.error;
       exercise = result.data;
     }
@@ -148,6 +156,8 @@ export async function listWorkouts(): Promise<WorkoutSession[]> {
 }
 
 export async function saveWorkout(workout: WorkoutSession, displayUnit: WeightUnit) {
+  const invalid = workout.exercises.find((item) => !APPROVED_EXERCISES.has(normalizeExerciseName(item.name)));
+  if (invalid) throw new Error(`“${invalid.name}” is not in the approved exercise list.`);
   const supabase = createSupabaseBrowserClient();
   const user = await getCurrentUser();
   if (!supabase || !user) {
@@ -177,6 +187,8 @@ export async function saveWorkout(workout: WorkoutSession, displayUnit: WeightUn
 }
 
 export async function updateWorkout(workout: WorkoutSession, displayUnit: WeightUnit) {
+  const invalid = workout.exercises.find((item) => !APPROVED_EXERCISES.has(normalizeExerciseName(item.name)));
+  if (invalid) throw new Error(`“${invalid.name}” is not in the approved exercise list.`);
   const supabase = createSupabaseBrowserClient();
   const user = await getCurrentUser();
   if (!supabase || !user) {

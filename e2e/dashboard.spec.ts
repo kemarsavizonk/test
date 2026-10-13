@@ -10,7 +10,7 @@ test("mobile menu stays above the date picker and all options remain tappable", 
     await page.getByRole("button", { name: "Open navigation", exact: true }).click();
     const menu = page.getByRole("navigation", { name: "Mobile menu" });
     await expect(menu).toBeVisible();
-    for (const label of ["Dashboard", "Log workout", "History", "Exercises", "Reports", "Achievements", "Me", "Install Kemtech"]) {
+    for (const label of ["Dashboard", "Log workout", "History", "Exercises", "Reports", "Achievements", "Me", "Install KemTech"]) {
       // Trial clicks perform hit-testing without navigating away.
       await menu.getByRole("link", { name: label, exact: true }).click({ trial: true });
     }

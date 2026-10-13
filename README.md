@@ -1,4 +1,4 @@
-# Kemtech Inc. Fitness Tracker
+# KemTech Inc. Fitness Tracker
 
 A responsive, private strength-training tracker for logging individual sets, reviewing workout history, measuring progress, and identifying personal records. It is built with Next.js, TypeScript, Tailwind CSS, Supabase, Recharts, Zod, Vitest, and Playwright.
 
@@ -69,11 +69,11 @@ Unit tests cover weight conversion, working-volume rules, estimated 1RM, aggrega
 
 Every push to the configured production branch triggers a new Vercel deployment. No service-role key is used by the browser or required by this application.
 
-## Installing Kemtech on a phone
+## Installing KemTech on a phone
 
-Kemtech includes a standalone web-app manifest and Home Screen icons. On iPhone,
+KemTech includes a standalone web-app manifest and Home Screen icons. On iPhone,
 open the site in Safari, tap Share → Add to Home Screen, enable Open as Web App
-if shown, and tap Add. Launch the Home Screen icon to use Kemtech without browser
+if shown, and tap Add. Launch the Home Screen icon to use KemTech without browser
 toolbars. Normal links still open in the browser. Android users can choose Install
 app or Add to Home Screen from the browser menu.
 
@@ -94,6 +94,13 @@ to your profile. Return to the logger and search its name to record sets. Custom
 exercises use the existing user-owned `exercises` table and its row-level security
 policies; preview exercises are stored on the current device. No additional SQL
 migration is needed.
+
+## Preferred name
+
+In **Me → Profile**, save an optional **Nickname** to personalize the dashboard
+and achievements. If it is blank, the app uses your first name. Nicknames are
+stored in the user's Supabase account metadata and work across devices; no SQL
+migration is needed. Preview names stay on the current device.
 
 ## Calculation rules
 

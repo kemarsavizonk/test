@@ -12,6 +12,7 @@ import { aggregatePeriod, exerciseVolume, maximumWeight, normalizeExerciseName }
 import { exerciseHistoryUrl } from "@/lib/exercise-history";
 import { formatNumber } from "@/lib/utils";
 import { useWorkouts } from "@/hooks/use-workouts";
+import { usePreferredName } from "@/hooks/use-preferred-name";
 
 type Period = "day" | "week" | "month" | "year";
 
@@ -37,6 +38,7 @@ function subscribeToDate(callback: () => void) {
 }
 
 export default function DashboardPage() {
+  const name = usePreferredName();
   const { workouts, unit, loading, error } = useWorkouts();
   const { achievements, unreadCount } = useAchievements();
   const today = useSyncExternalStore(subscribeToDate, getToday, () => "");
@@ -62,7 +64,7 @@ export default function DashboardPage() {
   useLayoutEffect(() => () => setCalendarOpen(false), []);
 
   return <div className="app-page dashboard-page">
-    <header className="dashboard-page-header"><div><div className="eyebrow">Your fitness, at a glance</div><h1>Your training dashboard</h1></div><Link href="/dashboard/workouts/new" aria-label="Log workout" className="btn btn-primary dashboard-log-button"><Plus size={20} /><span>Log workout</span></Link></header>
+    <header className="dashboard-page-header"><div><div className="eyebrow">{name ? `${name}’s fitness, at a glance` : "Your fitness, at a glance"}</div><h1>Your training dashboard</h1></div><Link href="/dashboard/workouts/new" aria-label="Log workout" className="btn btn-primary dashboard-log-button"><Plus size={20} /><span>Log workout</span></Link></header>
     {error && <div className="logger-error" role="alert">{error}</div>}
     <div className="dashboard-date-picker">
       <div className="dashboard-date-bar"><Button variant="ghost" aria-label={`Previous ${period}`} onClick={() => navigate(-1)}><ArrowLeft size={19} /></Button><button ref={dateTrigger} className="dashboard-date-trigger" aria-label="Choose training date" aria-expanded={calendarOpen} aria-haspopup="dialog" onClick={() => setCalendarOpen((open) => !open)}><CalendarDays size={20} /><span>{dateLabel}</span></button><Button variant="ghost" aria-label={`Next ${period}`} onClick={() => navigate(1)}><ArrowRight size={19} /></Button></div>

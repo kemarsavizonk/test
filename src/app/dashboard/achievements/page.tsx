@@ -6,8 +6,10 @@ import { WeightDisplay } from "@/components/weight-display";
 import { useAchievements } from "@/components/achievement-provider";
 import { achievementNotificationKey } from "@/lib/achievement-notifications";
 import { formatNumber } from "@/lib/utils";
+import { usePreferredName } from "@/hooks/use-preferred-name";
 
 export default function AchievementsPage() {
+  const name = usePreferredName();
   const { achievements, unit, loading, error, visitNewKeys } = useAchievements();
   const newCount = visitNewKeys.filter((key) => achievements.some((item) => achievementNotificationKey(item, unit) === key)).length;
 
@@ -17,7 +19,7 @@ export default function AchievementsPage() {
       <div className="achievement-badge" aria-label={`${achievements.length} personal bests`}>
         <div className="achievement-badge-inner"><Sparkles size={25} fill="currentColor" /><strong>{loading ? "—" : achievements.length}</strong><span>PERSONAL<br />BESTS</span></div>
       </div>
-      <div className="achievement-heading"><div className="eyebrow">Kemtech achievements</div><h1>{loading ? "Finding your personal bests…" : newCount ? `${newCount} new personal best${newCount === 1 ? "" : "s"}!` : achievements.length ? "Your personal bests" : "Your next personal best starts here"}</h1><p>{newCount ? "Congratulations! Your hard work paid off." : achievements.length ? "Your progress, one stronger session at a time." : "Complete the same exercise again with a heavier top set to unlock your first achievement."}</p></div>
+      <div className="achievement-heading"><div className="eyebrow">{name ? `${name}’s achievements` : "Your achievements"}</div><h1>{loading ? "Finding your personal bests…" : newCount ? `${newCount} new personal best${newCount === 1 ? "" : "s"}!` : achievements.length ? "Your personal bests" : "Your next personal best starts here"}</h1><p>{newCount ? "Congratulations! Your hard work paid off." : achievements.length ? "Your progress, one stronger session at a time." : "Complete the same exercise again with a heavier top set to unlock your first achievement."}</p></div>
     </section>
 
     {error && <div className="achievement-error" role="alert">{error}</div>}

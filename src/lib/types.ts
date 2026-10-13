@@ -52,6 +52,7 @@ export interface Profile {
   id: string;
   firstName: string;
   lastName: string;
+  nickname?: string;
   email: string;
   preferredWeightUnit: WeightUnit;
   timezone: string;

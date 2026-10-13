@@ -6,7 +6,7 @@ test("app metadata provides a standalone launch and branded Home Screen icons", 
   const response = await request.get("/manifest.webmanifest");
   expect(response.ok()).toBeTruthy();
   const manifest = await response.json();
-  expect(manifest).toMatchObject({ display: "standalone", start_url: "/dashboard", scope: "/", short_name: "Kemtech" });
+  expect(manifest).toMatchObject({ display: "standalone", start_url: "/dashboard", scope: "/", short_name: "KemTech" });
   await page.goto("/dashboard/settings");
   await expect(page.locator('meta[name="mobile-web-app-capable"]')).toHaveAttribute("content", "yes");
   await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute("href", "/icons/kemtech-180.png");
@@ -25,7 +25,7 @@ test("app metadata provides a standalone launch and branded Home Screen icons", 
 test("iPhone installation instructions explain the Home Screen launch", async ({ page }) => {
   await page.addInitScript(() => Object.defineProperty(navigator, "userAgent", { configurable: true, value: "iPhone" }));
   await page.goto("/dashboard/settings");
-  await expect(page.getByRole("heading", { name: "Use Kemtech as an app" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Use KemTech as an app" })).toBeVisible();
   await expect(page.getByText("Turn on Open as Web App if shown, then tap Add.")).toBeVisible();
 });
 
@@ -53,5 +53,5 @@ test("installed app pull-to-refresh preserves an unsaved workout and uses the sh
   await expect(page.getByLabel("Set 1 repetitions")).toHaveValue("8");
   await expect(page).toHaveURL(/\/dashboard\/workouts\/new$/);
   await page.goto("/dashboard/settings");
-  await expect(page.getByRole("heading", { name: "Use Kemtech as an app" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Use KemTech as an app" })).toHaveCount(0);
 });

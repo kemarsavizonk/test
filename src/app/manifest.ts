@@ -3,8 +3,8 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "Kemtech Inc. Fitness Tracker",
-    short_name: "Kemtech",
+    name: "KemTech Inc. Fitness Tracker",
+    short_name: "KemTech",
     description: "Your workouts, progress and personal bests in one place.",
     start_url: "/dashboard",
     scope: "/",

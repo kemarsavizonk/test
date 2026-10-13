@@ -81,6 +81,20 @@ In the installed app, pulling down at the top refreshes saved workout and achiev
 data without clearing a workout being edited. This web app requires an internet
 connection for account access and synced data.
 
+## Exercise history and custom exercises
+
+History lists each exercise once. Tap an exercise to see its dated logs, newest
+first, including the top working weight compared with the previous completed
+log, set details, repetitions, volume, estimated one-rep max, and notes. Exercises
+logged in the same session have separate entries. Deleting an exercise log keeps
+the other exercises from that session.
+
+Use **Add custom exercise** in the logger or exercise catalog to save an exercise
+to your profile. Return to the logger and search its name to record sets. Custom
+exercises use the existing user-owned `exercises` table and its row-level security
+policies; preview exercises are stored on the current device. No additional SQL
+migration is needed.
+
 ## Calculation rules
 
 - Weight is stored in kilograms in PostgreSQL and converted for display.

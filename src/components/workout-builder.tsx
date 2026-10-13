@@ -2,22 +2,25 @@
 
 import { Check, Copy, Dumbbell, GripVertical, Plus, Save, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { Button, Card, Field, PageHeader } from "@/components/ui";
 import { WeightDisplay } from "@/components/weight-display";
-import { MUSCLE_GROUPS, STARTER_EXERCISES } from "@/lib/constants";
-import { convertWeight, createId, exerciseVolume } from "@/lib/fitness";
+import { useExerciseCatalog } from "@/hooks/use-exercise-catalog";
+import { MUSCLE_GROUPS } from "@/lib/constants";
+import { convertWeight, createId, exerciseVolume, normalizeExerciseName } from "@/lib/fitness";
 import { getPreferredWeightUnit, saveWorkout, updateWorkout } from "@/lib/workout-repository";
 import type { SetType, WeightUnit, WorkoutExercise, WorkoutSession } from "@/lib/types";
 import { formatNumber } from "@/lib/utils";
 
 const newSet = (number: number) => ({ id: createId(), setNumber: number, weight: 0, repetitions: 0, completed: true, type: "working" as SetType });
 const newExercise = (): WorkoutExercise => ({ id: createId(), name: "", muscleGroup: "Chest", sets: [newSet(1)] });
-const approvedByName = new Map(STARTER_EXERCISES.map((exercise) => [exercise.name.toLocaleLowerCase(), exercise]));
 
 export function WorkoutBuilder({ initialWorkout, initialUnit }: { initialWorkout?: WorkoutSession; initialUnit?: WeightUnit }) {
   const router = useRouter();
+  const { catalog, loading: catalogLoading, error: catalogError } = useExerciseCatalog();
+  const approvedByName = new Map(catalog.map((item) => [normalizeExerciseName(item.name), item]));
   const [performedAt, setPerformedAt] = useState(format(initialWorkout ? new Date(initialWorkout.performedAt) : new Date(), "yyyy-MM-dd'T'HH:mm"));
   const [notes, setNotes] = useState(initialWorkout?.notes ?? "");
   const [duration, setDuration] = useState(initialWorkout?.durationMinutes ? String(initialWorkout.durationMinutes) : "");
@@ -36,8 +39,8 @@ export function WorkoutBuilder({ initialWorkout, initialUnit }: { initialWorkout
   const addSet = (id: string) => setExercises((items) => items.map((item) => item.id !== id ? item : { ...item, sets: [...item.sets, { ...newSet(item.sets.length + 1), weight: item.sets.at(-1)?.weight ?? 0, repetitions: item.sets.at(-1)?.repetitions ?? 0 }] }));
   const removeSet = (exerciseId: string, setId: string) => setExercises((items) => items.map((item) => item.id !== exerciseId ? item : { ...item, sets: item.sets.filter((set) => set.id !== setId).map((set, index) => ({ ...set, setNumber: index + 1 })) }));
   const chooseKnownExercise = (id: string, value: string) => {
-    const found = approvedByName.get(value.trim().toLocaleLowerCase());
-    updateExercise(id, found ? { name: found.name, muscleGroup: found.muscleGroup, equipment: found.equipment } : { name: value });
+    const found = approvedByName.get(normalizeExerciseName(value));
+    updateExercise(id, found ? { name: found.name, muscleGroup: found.muscleGroup, equipment: found.equipment, exerciseId: found.id } : { name: value });
   };
   const changeUnit = (nextUnit: WeightUnit) => {
     if (nextUnit === unit) return;
@@ -52,11 +55,11 @@ export function WorkoutBuilder({ initialWorkout, initialUnit }: { initialWorkout
     setError("");
     const valid = exercises.filter((item) => item.name.trim() && item.sets.length);
     if (!valid.length) { setError("Select at least one exercise and add a set before saving."); return; }
-    const invalid = valid.find((item) => !approvedByName.has(item.name.trim().toLocaleLowerCase()));
-    if (invalid) { setError(`“${invalid.name}” is not in the approved exercise list. Choose a suggestion before saving.`); return; }
+    const invalid = valid.find((item) => !approvedByName.has(normalizeExerciseName(item.name)));
+    if (invalid) { setError(`“${invalid.name}” is not in your exercise catalog. Choose a suggestion or add it to your profile first.`); return; }
     setSaving(true);
     const now = new Date().toISOString();
-    const canonicalExercises = valid.map((item) => ({ ...item, name: approvedByName.get(item.name.trim().toLocaleLowerCase())!.name }));
+    const canonicalExercises = valid.map((item) => ({ ...item, name: approvedByName.get(normalizeExerciseName(item.name))!.name }));
     const names = canonicalExercises.map((item) => item.name);
     const workout: WorkoutSession = {
       id: initialWorkout?.id ?? createId(),
@@ -89,13 +92,15 @@ export function WorkoutBuilder({ initialWorkout, initialUnit }: { initialWorkout
 
   const actions = <div className="logger-actions">
     <Button variant="secondary" className="logger-discard" disabled={saving} onClick={discard}><X size={17} /> Discard</Button>
-    <Button variant="secondary" disabled={saving} onClick={() => void submit("draft")}><Save size={17} /> Save draft</Button>
-    <Button disabled={saving} onClick={() => void submit("completed")}><Check size={17} /> {saving ? "Saving…" : initialWorkout ? "Save changes" : "Finish"}</Button>
+    <Button variant="secondary" disabled={saving || catalogLoading} onClick={() => void submit("draft")}><Save size={17} /> Save draft</Button>
+    <Button disabled={saving || catalogLoading} onClick={() => void submit("completed")}><Check size={17} /> {saving ? "Saving…" : initialWorkout ? "Save changes" : "Finish"}</Button>
   </div>;
 
   return <div className="app-page workout-builder">
     <PageHeader eyebrow={initialWorkout ? "Edit workout" : "Workout logger"} title={initialWorkout ? "Correct your session" : "Record your session"} description="Choose an exercise, enter your weight and reps, then add more sets." action={actions} />
     {error && <div className="logger-error" role="alert">{error}</div>}
+    <div className="logger-catalog-note"><p>Search preset exercises and the exercises you have added to your profile.</p><Link href="/dashboard/exercises/new" className="btn btn-secondary"><Plus size={17} /> Add custom exercise</Link></div>
+    {catalogError && <div className="logger-error" role="alert">{catalogError}</div>}
     <div className="builder-grid">
       <div className="builder-content">
         <Card className="logger-details"><div className="logger-form-grid">
@@ -104,9 +109,9 @@ export function WorkoutBuilder({ initialWorkout, initialUnit }: { initialWorkout
           <Field label="Weight entry unit"><select className="input" value={unit} onChange={(event) => changeUnit(event.target.value as WeightUnit)}><option value="lb">Pounds (lb)</option><option value="kg">Kilograms (kg)</option></select></Field>
         </div></Card>
         {exercises.map((exercise, exerciseIndex) => {
-          const selected = approvedByName.get(exercise.name.trim().toLocaleLowerCase());
-          const query = exercise.name.trim().toLocaleLowerCase();
-          const matches = query ? STARTER_EXERCISES.filter((item) => item.name.toLocaleLowerCase().includes(query))
+          const selected = approvedByName.get(normalizeExerciseName(exercise.name));
+          const query = normalizeExerciseName(exercise.name);
+          const matches = query ? catalog.filter((item) => item.name.toLocaleLowerCase().includes(query))
             .sort((a, b) => Number(b.name.toLocaleLowerCase().startsWith(query)) - Number(a.name.toLocaleLowerCase().startsWith(query)) || a.name.localeCompare(b.name)) : [];
           const showSuggestions = activeExerciseId === exercise.id && Boolean(query) && !selected;
           const optionListId = `exercise-options-${exerciseIndex}`;
@@ -114,7 +119,7 @@ export function WorkoutBuilder({ initialWorkout, initialUnit }: { initialWorkout
             <div className="logger-exercise-header"><GripVertical size={18} color="#94a3b8" /><strong>Exercise {exerciseIndex + 1}</strong><Button variant="ghost" aria-label="Remove exercise" onClick={() => setExercises((items) => items.filter((item) => item.id !== exercise.id))}><Trash2 size={18} /></Button></div>
             <div className="logger-exercise-body">
               <div className="logger-exercise-fields">
-                <Field label="Exercise" hint={exercise.name && !selected ? "Choose an exercise from the suggestions." : "Search the exercise list."}>
+                <Field label="Exercise" hint={exercise.name && !selected ? "Choose an exercise from the suggestions." : "Search your exercise list."}>
                   <div className="exercise-combobox" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setActiveExerciseId(null); }}>
                     <input className="input" role="combobox" value={exercise.name} onFocus={() => setActiveExerciseId(exercise.id)}
                       onChange={(event) => { setActiveExerciseId(exercise.id); chooseKnownExercise(exercise.id, event.target.value); }}
@@ -127,7 +132,7 @@ export function WorkoutBuilder({ initialWorkout, initialUnit }: { initialWorkout
                       {matches.length ? matches.map((item) => <button key={item.name} type="button" role="option" aria-selected="false" className="exercise-option"
                         onMouseDown={(event) => event.preventDefault()} onClick={() => { chooseKnownExercise(exercise.id, item.name); setActiveExerciseId(null); }}>
                         <strong>{item.name}</strong><span>{item.muscleGroup} · {item.equipment}</span>
-                      </button>) : <div className="exercise-empty">No approved exercises found.</div>}
+                      </button>) : <div className="exercise-empty">No matching exercise. Use Add custom exercise to save it to your profile.</div>}
                     </div>}
                   </div>
                 </Field>
@@ -165,7 +170,7 @@ export function WorkoutBuilder({ initialWorkout, initialUnit }: { initialWorkout
         <div><span className="muted">Total sets</span><strong>{totalSets}</strong></div>
         <div><span className="muted">Working volume</span><strong><WeightDisplay value={totalVolume} unit={unit} /></strong></div>
         <p className="muted">Completed working, drop, and failure sets count toward volume.</p>
-        <Button disabled={saving} onClick={() => void submit("completed")}><Dumbbell size={17} /> {saving ? "Saving…" : initialWorkout ? "Save changes" : "Finish"}</Button>
+        <Button disabled={saving || catalogLoading} onClick={() => void submit("completed")}><Dumbbell size={17} /> {saving ? "Saving…" : initialWorkout ? "Save changes" : "Finish"}</Button>
       </Card></aside>
     </div>
   </div>;

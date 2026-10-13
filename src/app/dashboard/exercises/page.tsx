@@ -1,16 +1,26 @@
 "use client";
 
-import { BookOpen, Search, Star } from "lucide-react";
+import { BookOpen, Plus, Search, Star } from "lucide-react";
+import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Card, PageHeader } from "@/components/ui";
-import { MUSCLE_GROUPS, STARTER_EXERCISES } from "@/lib/constants";
+import { Badge, Card, PageHeader } from "@/components/ui";
+import { MUSCLE_GROUPS } from "@/lib/constants";
+import { normalizeExerciseName } from "@/lib/fitness";
+import { useExerciseCatalog } from "@/hooks/use-exercise-catalog";
 import { useWorkouts } from "@/hooks/use-workouts";
 
 export default function ExerciseLibraryPage() {
-  const { workouts } = useWorkouts(); const [query, setQuery] = useState(""); const [group, setGroup] = useState("All");
-  const exercises = useMemo(() => { const seen = new Map<string,{name:string;muscleGroup:string;equipment?:string;uses:number;last?:string}>(); STARTER_EXERCISES.forEach(item => seen.set(item.name.toLowerCase(), {...item,uses:0})); workouts.forEach(workout => workout.exercises.forEach(item => { const key=item.name.toLowerCase(); const old=seen.get(key); seen.set(key,{name:item.name,muscleGroup:item.muscleGroup,equipment:item.equipment,uses:(old?.uses??0)+1,last:workout.performedAt}); })); return [...seen.values()].filter(item => (group === "All" || item.muscleGroup === group) && item.name.toLowerCase().includes(query.toLowerCase())).sort((a,b) => b.uses-a.uses || a.name.localeCompare(b.name)); }, [workouts,query,group]);
-  return <div className="app-page"><PageHeader eyebrow="Exercise library" title="Approved exercise catalog" description="Browse the complete set of exercises available in the workout logger. Search by name or filter by muscle group." />
-    <Card style={{ padding: 16, marginBottom: 18 }}><div style={{ display: "grid", gridTemplateColumns: "1fr 220px", gap: 12 }} className="exercise-filter"><label style={{ position: "relative" }}><Search size={18} style={{ position: "absolute", left: 13, top: 14, color: "#94a3b8" }} /><input aria-label="Search exercises" className="input" style={{ paddingLeft: 42 }} placeholder="Search exercise names" value={query} onChange={e=>setQuery(e.target.value)} /></label><select aria-label="Filter muscle group" className="input" value={group} onChange={e=>setGroup(e.target.value)}><option>All</option>{MUSCLE_GROUPS.map(item=><option key={item}>{item}</option>)}</select></div></Card>
-    <div className="grid-auto">{exercises.map(item => <Card key={item.name} style={{ padding: 20 }}><div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ width: 42, height: 42, display: "grid", placeItems: "center", borderRadius: 12, color: "#1642bb", background: "#eff4ff" }}><BookOpen size={19} /></span>{item.uses > 0 && <Star size={17} fill="#f59e0b" color="#f59e0b" aria-label="Used exercise" />}</div><h2 style={{ fontSize: 17, margin: "17px 0 6px" }}>{item.name}</h2><p className="muted" style={{ fontSize: 13, margin: 0 }}>{item.muscleGroup}{item.equipment ? ` · ${item.equipment}` : ""}</p><div style={{ paddingTop: 15, marginTop: 15, borderTop: "1px solid #edf0f5", fontSize: 12, color: item.uses ? "#15803d" : "#64748b" }}>{item.uses ? `Logged in ${item.uses} session${item.uses===1?"":"s"}` : "Starter exercise"}</div></Card>)}</div><style jsx>{`@media(max-width:600px){.exercise-filter{grid-template-columns:1fr!important}}`}</style>
+  const { workouts } = useWorkouts();
+  const { catalog, loading, error } = useExerciseCatalog();
+  const [query, setQuery] = useState("");
+  const [group, setGroup] = useState("All");
+  const exercises = useMemo(() => catalog.map((item) => {
+    const uses = workouts.filter((workout) => workout.exercises.some((exercise) => normalizeExerciseName(exercise.name) === normalizeExerciseName(item.name))).length;
+    return { ...item, uses };
+  }).filter((item) => (group === "All" || item.muscleGroup === group) && item.name.toLocaleLowerCase().includes(query.toLocaleLowerCase())).sort((a, b) => b.uses - a.uses || a.name.localeCompare(b.name)), [workouts, catalog, query, group]);
+  return <div className="app-page"><PageHeader eyebrow="Exercise library" title="Your exercise catalog" description="Browse preset exercises and the custom exercises saved to your profile." action={<Link href="/dashboard/exercises/new" className="btn btn-primary"><Plus size={18} /> Add custom exercise</Link>} />
+    <Card className="history-search"><div className="history-filters"><label className="history-search-input"><Search size={18} /><input aria-label="Search exercises" className="input" placeholder="Search exercise names" value={query} onChange={(event) => setQuery(event.target.value)} /></label><select aria-label="Filter muscle group" className="input" value={group} onChange={(event) => setGroup(event.target.value)}><option>All</option>{MUSCLE_GROUPS.map((item) => <option key={item}>{item}</option>)}</select></div></Card>
+    {error && <div className="logger-error" role="alert">{error}</div>}
+    {loading ? <p className="muted">Loading your exercise catalog…</p> : <div className="grid-auto">{exercises.map((item) => <Card key={item.name} style={{ padding: 20 }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><BookOpen size={22} color="#1642bb" /><Badge tone={item.isCustom ? "green" : "blue"}>{item.isCustom ? "Custom exercise" : "Preset"}</Badge></div><h2 style={{ fontSize: 17, margin: "17px 0 6px" }}>{item.name}</h2><p className="muted" style={{ fontSize: 13, margin: 0 }}>{item.muscleGroup}{item.equipment ? ` · ${item.equipment}` : ""}</p><div style={{ display: "flex", gap: 6, alignItems: "center", paddingTop: 15, marginTop: 15, borderTop: "1px solid #edf0f5", fontSize: 12, color: item.uses ? "#15803d" : "#64748b" }}>{item.uses > 0 && <Star size={15} />} {item.uses ? `Logged in ${item.uses} session${item.uses === 1 ? "" : "s"}` : "Ready to log"}</div></Card>)}</div>}
   </div>;
 }

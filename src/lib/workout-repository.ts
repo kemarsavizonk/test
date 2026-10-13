@@ -1,7 +1,7 @@
 "use client";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { STARTER_EXERCISES } from "@/lib/constants";
+import { listExerciseCatalog } from "@/lib/exercise-repository";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { fromCanonicalKg, normalizeExerciseName, toCanonicalKg } from "@/lib/fitness";
 import type { WeightUnit, WorkoutSession } from "@/lib/types";
@@ -10,7 +10,11 @@ export const WORKOUTS_CHANGED = "kemtech-workouts-changed";
 const notifyWorkoutsChanged = () => window.dispatchEvent(new Event(WORKOUTS_CHANGED));
 
 const LOCAL_KEY = "kemtech-preview-workouts-v1";
-const APPROVED_EXERCISES = new Set(STARTER_EXERCISES.map((exercise) => normalizeExerciseName(exercise.name)));
+async function validateExercises(workout: WorkoutSession) {
+  const catalog = new Set((await listExerciseCatalog()).map((item) => normalizeExerciseName(item.name)));
+  const invalid = workout.exercises.find((item) => !catalog.has(normalizeExerciseName(item.name)));
+  if (invalid) throw new Error(`“${invalid.name}” is not in your exercise catalog. Add it to your profile before logging it.`);
+}
 
 interface DatabaseSet {
   id: string;
@@ -112,7 +116,6 @@ export async function getPreferredWeightUnit(): Promise<WeightUnit> {
 async function insertWorkoutExercises(supabase: SupabaseClient, userId: string, sessionId: string, workout: WorkoutSession, displayUnit: WeightUnit) {
   for (const [sortOrder, item] of workout.exercises.entries()) {
     const normalizedName = normalizeExerciseName(item.name);
-    if (!APPROVED_EXERCISES.has(normalizedName)) throw new Error(`“${item.name}” is not in the approved exercise list.`);
     let { data: exercise } = await supabase.from("exercises").select("id").eq("normalized_name", normalizedName).or(`user_id.eq.${userId},user_id.is.null`).limit(1).maybeSingle();
     if (!exercise) {
       let { data: muscleGroup } = await supabase.from("muscle_groups").select("id").eq("name", item.muscleGroup).or(`user_id.eq.${userId},user_id.is.null`).limit(1).maybeSingle();
@@ -137,19 +140,22 @@ export async function listWorkouts(): Promise<WorkoutSession[]> {
   const user = await getCurrentUser();
   if (!supabase || !user) return readLocal();
 
-  const { data, error } = await supabase
-    .from("workout_sessions")
-    .select(`
+  const data: DatabaseWorkout[] = [];
+  const batchSize = 100;
+  for (let offset = 0; ; offset += batchSize) {
+    const result = await supabase.from("workout_sessions").select(`
       id, title, performed_at, completed_at, status, notes, duration_minutes, created_at, updated_at,
       workout_exercises (
         id, notes, sort_order,
         exercises (id, name, muscle_groups(name)),
         workout_sets (id, set_number, weight_kg, repetitions, is_completed, set_type, perceived_exertion)
       )
-    `)
-    .order("performed_at", { ascending: false })
-    .limit(100);
-  if (error) throw error;
+    `).order("performed_at", { ascending: false }).order("id", { ascending: false }).range(offset, offset + batchSize - 1);
+    if (result.error) throw result.error;
+    const batch = (result.data ?? []) as unknown as DatabaseWorkout[];
+    data.push(...batch);
+    if (batch.length < batchSize) break;
+  }
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -196,8 +202,7 @@ export async function listWorkouts(): Promise<WorkoutSession[]> {
 }
 
 export async function saveWorkout(workout: WorkoutSession, displayUnit: WeightUnit) {
-  const invalid = workout.exercises.find((item) => !APPROVED_EXERCISES.has(normalizeExerciseName(item.name)));
-  if (invalid) throw new Error(`“${invalid.name}” is not in the approved exercise list.`);
+  await validateExercises(workout);
   const supabase = createSupabaseBrowserClient();
   const user = await getCurrentUser();
   if (!supabase || !user) {
@@ -229,8 +234,7 @@ export async function saveWorkout(workout: WorkoutSession, displayUnit: WeightUn
 }
 
 export async function updateWorkout(workout: WorkoutSession, displayUnit: WeightUnit) {
-  const invalid = workout.exercises.find((item) => !APPROVED_EXERCISES.has(normalizeExerciseName(item.name)));
-  if (invalid) throw new Error(`“${invalid.name}” is not in the approved exercise list.`);
+  await validateExercises(workout);
   const supabase = createSupabaseBrowserClient();
   const user = await getCurrentUser();
   if (!supabase || !user) {
@@ -257,5 +261,26 @@ export async function deleteWorkout(id: string) {
   }
   const { error } = await supabase.from("workout_sessions").delete().eq("id", id);
   if (error) throw error;
+  notifyWorkoutsChanged();
+}
+
+export async function deleteExerciseLogs(workoutId: string, exerciseIds: string[]) {
+  const client = createSupabaseBrowserClient();
+  const user = await getCurrentUser();
+  const workout = (await listWorkouts()).find((item) => item.id === workoutId);
+  if (!workout) throw new Error("This workout no longer exists.");
+  const remaining = workout.exercises.filter((item) => !exerciseIds.includes(item.id));
+  if (remaining.length === workout.exercises.length) throw new Error("This exercise log no longer exists.");
+  if (!remaining.length) return deleteWorkout(workoutId);
+  const names = remaining.map((item) => item.name);
+  const title = names.length > 2 ? `${names.slice(0, 2).join(" + ")} + ${names.length - 2} more` : names.join(" + ");
+  if (!client || !user) {
+    writeLocal(readLocal().map((item) => item.id === workoutId ? { ...item, title, exercises: remaining, updatedAt: new Date().toISOString() } : item));
+  } else {
+    const { error } = await client.from("workout_exercises").delete().eq("workout_session_id", workoutId).in("id", exerciseIds);
+    if (error) throw error;
+    const result = await client.from("workout_sessions").update({ title }).eq("id", workoutId).eq("user_id", user.id);
+    if (result.error) throw result.error;
+  }
   notifyWorkoutsChanged();
 }

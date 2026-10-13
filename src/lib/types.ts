@@ -78,3 +78,15 @@ export interface ExerciseComparison {
   currentDate: string;
   previousDate: string;
 }
+
+export interface PersonalBestAchievement {
+  id: string;
+  exerciseName: string;
+  achievedAt: string;
+  currentWeight: number;
+  previousWeight: number;
+  improvement: number;
+  percentage: number | null;
+  repetitions: number;
+  volumeImprovementPercentage: number | null;
+}

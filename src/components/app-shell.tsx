@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, BookOpen, Dumbbell, Home, LogOut, Medal, Menu, Plus, UserRound, X } from "lucide-react";
+import { Award, BarChart3, BookOpen, Dumbbell, Home, LogOut, Menu, Plus, UserRound, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -13,7 +13,7 @@ const items = [
   { href: "/dashboard/workouts", label: "History", icon: Dumbbell, exact: true },
   { href: "/dashboard/exercises", label: "Exercises", icon: BookOpen },
   { href: "/dashboard/reports", label: "Reports", icon: BarChart3 },
-  { href: "/dashboard/records", label: "Records", icon: Medal },
+  { href: "/dashboard/achievements", label: "Achievements", icon: Award },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -26,7 +26,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     {open && <div className="mobile-only" style={{ position: "fixed", inset: "66px 0 0", background: "rgba(15,23,42,.28)", zIndex: 40 }} onClick={() => setOpen(false)}><nav onClick={(event) => event.stopPropagation()} style={{ padding: 15, background: "white", display: "grid", gap: 3, boxShadow: "0 18px 45px rgba(15,23,42,.14)" }}>{nav}<Link href="/dashboard/settings" onClick={() => setOpen(false)} style={{ display: "flex", alignItems: "center", gap: 12, padding: 12, color: "#475569", fontWeight: 650 }}><UserRound size={19} />Me</Link><button onClick={() => void signOut()} className="btn btn-ghost" style={{ justifyContent: "flex-start", paddingInline: 12 }}><LogOut size={19} />Log out</button></nav></div>}
     <main style={{ minHeight: "100vh" }} className="shell-main">{children}</main>
     <nav className="mobile-only mobile-tab-bar" aria-label="Account navigation">
-      {[{ href: "/dashboard", label: "Dashboard", icon: Home, exact: true }, { href: "/dashboard/reports", label: "Reports", icon: BarChart3 }, { href: "/dashboard/settings", label: "Me", icon: UserRound }].map(({ href, label, icon: Icon, exact }) => { const active = exact ? path === href : path.startsWith(href); return <Link key={href} href={href} className={active ? "mobile-tab active" : "mobile-tab"}><Icon size={21} /><span>{label}</span></Link>; })}
+      {[{ href: "/dashboard", label: "Dashboard", icon: Home, exact: true }, { href: "/dashboard/reports", label: "Reports", icon: BarChart3 }, { href: "/dashboard/achievements", label: "Achievements", icon: Award }, { href: "/dashboard/settings", label: "Me", icon: UserRound }].map(({ href, label, icon: Icon, exact }) => { const active = exact ? path === href : path.startsWith(href); return <Link key={href} href={href} className={active ? "mobile-tab active" : "mobile-tab"}><Icon size={21} /><span>{label}</span></Link>; })}
       <Link href="/dashboard/workouts/new" className="mobile-add" aria-label="Add workout"><Plus size={30} strokeWidth={2.7} /></Link>
     </nav>
     <style jsx global>{`@media(min-width:761px){.shell-main{margin-left:242px}}`}</style>

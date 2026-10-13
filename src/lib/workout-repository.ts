@@ -40,6 +40,39 @@ interface DatabaseWorkout {
   workout_exercises: DatabaseWorkoutExercise[];
 }
 
+interface ExerciseMetadata {
+  kemtech: 1;
+  muscleGroup: string;
+  equipment?: string;
+  notes?: string;
+}
+
+function encodeExerciseMetadata(item: WorkoutSession["exercises"][number]) {
+  return JSON.stringify({
+    kemtech: 1,
+    muscleGroup: item.muscleGroup,
+    equipment: item.equipment || undefined,
+    notes: item.notes || undefined,
+  } satisfies ExerciseMetadata);
+}
+
+function decodeExerciseMetadata(value: string | null, fallbackMuscleGroup: string) {
+  if (!value) return { muscleGroup: fallbackMuscleGroup, notes: undefined, equipment: undefined };
+  try {
+    const parsed = JSON.parse(value) as Partial<ExerciseMetadata>;
+    if (parsed.kemtech === 1 && typeof parsed.muscleGroup === "string") {
+      return {
+        muscleGroup: parsed.muscleGroup,
+        equipment: typeof parsed.equipment === "string" ? parsed.equipment : undefined,
+        notes: typeof parsed.notes === "string" ? parsed.notes : undefined,
+      };
+    }
+  } catch {
+    // Existing workouts may contain unstructured notes; keep them intact.
+  }
+  return { muscleGroup: fallbackMuscleGroup, notes: value, equipment: undefined };
+}
+
 function readLocal(): WorkoutSession[] {
   if (typeof window === "undefined") return [];
   try {
@@ -89,7 +122,7 @@ async function insertWorkoutExercises(supabase: SupabaseClient, userId: string, 
       if (result.error) throw result.error;
       exercise = result.data;
     }
-    const { data: workoutExercise, error: itemError } = await supabase.from("workout_exercises").insert({ workout_session_id: sessionId, exercise_id: exercise.id, sort_order: sortOrder, notes: item.notes ?? null }).select("id").single();
+    const { data: workoutExercise, error: itemError } = await supabase.from("workout_exercises").insert({ workout_session_id: sessionId, exercise_id: exercise.id, sort_order: sortOrder, notes: encodeExerciseMetadata(item) }).select("id").single();
     if (itemError) throw itemError;
     const { error: setsError } = await supabase.from("workout_sets").insert(item.sets.map((set) => ({ workout_exercise_id: workoutExercise.id, set_number: set.setNumber, weight_kg: toCanonicalKg(set.weight, displayUnit), repetitions: set.repetitions, is_completed: set.completed, set_type: set.type, perceived_exertion: set.rpe ?? null })));
     if (setsError) throw setsError;
@@ -134,24 +167,28 @@ export async function listWorkouts(): Promise<WorkoutSession[]> {
     updatedAt: row.updated_at,
     exercises: (row.workout_exercises ?? [])
       .sort((a, b) => a.sort_order - b.sort_order)
-      .map((item) => ({
-        id: item.id,
-        exerciseId: item.exercises?.id,
-        name: item.exercises?.name ?? "Exercise",
-        muscleGroup: item.exercises?.muscle_groups?.name ?? "Other",
-        notes: item.notes ?? undefined,
-        sets: (item.workout_sets ?? [])
-          .sort((a, b) => a.set_number - b.set_number)
-          .map((set) => ({
-            id: set.id,
-            setNumber: set.set_number,
-            weight: fromCanonicalKg(Number(set.weight_kg), displayUnit),
-            repetitions: set.repetitions,
-            completed: set.is_completed,
-            type: set.set_type,
-            rpe: set.perceived_exertion ?? undefined,
-          })),
-      })),
+      .map((item) => {
+        const metadata = decodeExerciseMetadata(item.notes, item.exercises?.muscle_groups?.name ?? "Other");
+        return {
+          id: item.id,
+          exerciseId: item.exercises?.id,
+          name: item.exercises?.name ?? "Exercise",
+          muscleGroup: metadata.muscleGroup,
+          equipment: metadata.equipment,
+          notes: metadata.notes,
+          sets: (item.workout_sets ?? [])
+            .sort((a, b) => a.set_number - b.set_number)
+            .map((set) => ({
+              id: set.id,
+              setNumber: set.set_number,
+              weight: fromCanonicalKg(Number(set.weight_kg), displayUnit),
+              repetitions: set.repetitions,
+              completed: set.is_completed,
+              type: set.set_type,
+              rpe: set.perceived_exertion ?? undefined,
+            })),
+        };
+      }),
   }));
 }
 

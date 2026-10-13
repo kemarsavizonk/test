@@ -1,5 +1,5 @@
 import { KG_TO_LB } from "@/lib/constants";
-import type { ExerciseComparison, PeriodMetrics, WeightUnit, WorkoutExercise, WorkoutSession, WorkoutSet } from "@/lib/types";
+import type { ExerciseComparison, PeriodMetrics, PersonalBestAchievement, WeightUnit, WorkoutExercise, WorkoutSession, WorkoutSet } from "@/lib/types";
 
 export function normalizeExerciseName(name: string) {
   return name.trim().replace(/\s+/g, " ").toLocaleLowerCase();
@@ -125,6 +125,49 @@ export function buildLatestExerciseComparisons(workouts: WorkoutSession[]): Exer
       };
     })
     .sort((a, b) => new Date(b.currentDate).getTime() - new Date(a.currentDate).getTime());
+}
+
+export function buildPersonalBestAchievements(workouts: WorkoutSession[]): PersonalBestAchievement[] {
+  const bests = new Map<string, { weight: number; volume: number }>();
+  const achievements: PersonalBestAchievement[] = [];
+
+  [...workouts]
+    .filter((workout) => workout.status === "completed")
+    .sort((a, b) => new Date(a.performedAt).getTime() - new Date(b.performedAt).getTime())
+    .forEach((workout) => workout.exercises.forEach((exercise) => {
+      const currentWeight = maximumWeight(exercise);
+      if (currentWeight == null || currentWeight <= 0) return;
+
+      const key = normalizeExerciseName(exercise.name);
+      const previous = bests.get(key);
+      const currentVolume = exerciseVolume(exercise);
+      const repetitions = Math.max(0, ...exercise.sets
+        .filter((set) => set.completed && set.type !== "warmup" && set.weight === currentWeight)
+        .map((set) => set.repetitions));
+
+      if (previous && currentWeight > previous.weight) {
+        achievements.push({
+          id: `${workout.id}:${exercise.id}:max-weight`,
+          exerciseName: exercise.name,
+          achievedAt: workout.performedAt,
+          currentWeight,
+          previousWeight: previous.weight,
+          improvement: currentWeight - previous.weight,
+          percentage: percentageChange(currentWeight, previous.weight),
+          repetitions,
+          volumeImprovementPercentage: currentVolume > previous.volume
+            ? percentageChange(currentVolume, previous.volume)
+            : null,
+        });
+      }
+
+      bests.set(key, {
+        weight: Math.max(previous?.weight ?? 0, currentWeight),
+        volume: Math.max(previous?.volume ?? 0, currentVolume),
+      });
+    }));
+
+  return achievements.sort((a, b) => new Date(b.achievedAt).getTime() - new Date(a.achievedAt).getTime());
 }
 
 export function formatWeight(value: number, unit: WeightUnit) {

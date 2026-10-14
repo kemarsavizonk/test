@@ -80,14 +80,26 @@ export interface ExerciseComparison {
   previousDate: string;
 }
 
-export interface PersonalBestAchievement {
+interface AchievementBase {
   id: string;
   exerciseName: string;
   achievedAt: string;
-  currentWeight: number;
-  previousWeight: number;
   improvement: number;
   percentage: number | null;
+}
+
+export interface WeightAchievement extends AchievementBase {
+  kind: "weight";
+  currentWeight: number;
+  previousWeight: number;
   repetitions: number;
   volumeImprovementPercentage: number | null;
 }
+
+export interface CountAchievement extends AchievementBase {
+  kind: "reps" | "sets";
+  currentCount: number;
+  previousCount: number;
+}
+
+export type PersonalBestAchievement = WeightAchievement | CountAchievement;

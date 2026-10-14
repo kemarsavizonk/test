@@ -52,15 +52,15 @@ test("unread achievements clear on opening, remain new for that visit, and stay 
   const mobileTab = page.getByRole("navigation", { name: "Account navigation" }).getByRole("link", { name: /Achievements/ });
   await expect(mobileTab.getByLabel("1 unread achievement", { exact: true })).toBeVisible();
   await mobileTab.click();
-  await expect(page.getByRole("heading", { name: "1 new personal best!", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "1 new achievement!", exact: true })).toBeVisible();
   await expect(mobileTab.locator(".notification-badge")).toHaveCount(0);
   await page.getByRole("navigation", { name: "Account navigation" }).getByRole("link", { name: "Dashboard", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Your training dashboard", exact: true })).toBeVisible();
   await mobileTab.click();
-  await expect(page.getByRole("heading", { name: "Your personal bests", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your training achievements", exact: true })).toBeVisible();
   await expect(page.locator(".achievement-new")).toHaveCount(0);
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Your personal bests", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your training achievements", exact: true })).toBeVisible();
   await page.goto("/dashboard/workouts/new");
   await page.getByRole("combobox", { name: /^Exercise / }).fill("Barbell Back Squat");
   await page.getByLabel("Set 1 weight", { exact: true }).fill("60");
@@ -69,7 +69,7 @@ test("unread achievements clear on opening, remain new for that visit, and stay 
   await expect(page).toHaveURL(/\/dashboard\/workouts$/);
   await expect(mobileTab.getByLabel("1 unread achievement", { exact: true })).toBeVisible();
   await mobileTab.click();
-  await expect(page.getByRole("heading", { name: "1 new personal best!", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "1 new achievement!", exact: true })).toBeVisible();
   await expect(page.locator(".achievement-row")).toHaveCount(2);
   await expect(page.locator(".achievement-new")).toHaveCount(1);
   await page.screenshot({ path: "/private/tmp/kemtech-mobile-achievements.png", fullPage: true });

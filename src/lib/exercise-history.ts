@@ -1,5 +1,6 @@
 import { exerciseVolume, maximumWeight, normalizeExerciseName, percentageChange } from "@/lib/fitness";
 import type { WorkoutExercise, WorkoutSession } from "@/lib/types";
+import { format } from "date-fns";
 
 export interface ExerciseLog {
   workout: WorkoutSession;
@@ -16,6 +17,20 @@ export interface ExerciseHistory {
   key: string;
   name: string;
   logs: ExerciseLog[];
+}
+
+export interface HistoryFilters { query: string; status: string; muscleGroup: string; fromDate: string; toDate: string }
+
+export function filterExerciseHistory(histories: ExerciseHistory[], filters: HistoryFilters): ExerciseHistory[] {
+  if (filters.fromDate && filters.toDate && filters.fromDate > filters.toDate) return [];
+  return histories.filter((history) => history.name.toLocaleLowerCase().includes(filters.query.trim().toLocaleLowerCase()))
+    .map((history) => ({ ...history, logs: history.logs.filter((log) => {
+      const date = format(new Date(log.workout.performedAt), "yyyy-MM-dd");
+      return (filters.status === "all" || log.workout.status === filters.status)
+        && (filters.muscleGroup === "all" || log.exercise.muscleGroup === filters.muscleGroup)
+        && (!filters.fromDate || date >= filters.fromDate) && (!filters.toDate || date <= filters.toDate);
+    }) })).filter((history) => history.logs.length > 0)
+    .sort((a, b) => new Date(b.logs[0].workout.performedAt).getTime() - new Date(a.logs[0].workout.performedAt).getTime() || a.name.localeCompare(b.name));
 }
 
 export function exerciseHistoryUrl(key: string) {

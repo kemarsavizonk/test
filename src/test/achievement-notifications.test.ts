@@ -4,7 +4,7 @@ import { convertWeight } from "@/lib/fitness";
 import type { PersonalBestAchievement } from "@/lib/types";
 
 const record: PersonalBestAchievement = {
-  id: "session-1:exercise-1:max-weight", exerciseName: "Barbell Back Squat", achievedAt: "2026-10-12T12:00:00Z",
+  id: "session-1:exercise-1:max-weight", kind: "weight", exerciseName: "Barbell Back Squat", achievedAt: "2026-10-12T12:00:00Z",
   currentWeight: 55, previousWeight: 50, improvement: 5, percentage: 10, repetitions: 10, volumeImprovementPercentage: 10,
 };
 

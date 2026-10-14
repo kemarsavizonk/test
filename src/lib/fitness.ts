@@ -129,43 +129,66 @@ export function buildLatestExerciseComparisons(workouts: WorkoutSession[]): Exer
 
 export function buildPersonalBestAchievements(workouts: WorkoutSession[]): PersonalBestAchievement[] {
   const bests = new Map<string, { weight: number; volume: number }>();
+  const lastCounts = new Map<string, { reps: number; sets: number }>();
   const achievements: PersonalBestAchievement[] = [];
 
   [...workouts]
     .filter((workout) => workout.status === "completed")
-    .sort((a, b) => new Date(a.performedAt).getTime() - new Date(b.performedAt).getTime())
-    .forEach((workout) => workout.exercises.forEach((exercise) => {
-      const currentWeight = maximumWeight(exercise);
-      if (currentWeight == null || currentWeight <= 0) return;
-
-      const key = normalizeExerciseName(exercise.name);
-      const previous = bests.get(key);
-      const currentVolume = exerciseVolume(exercise);
-      const repetitions = Math.max(0, ...exercise.sets
-        .filter((set) => set.completed && set.type !== "warmup" && set.weight === currentWeight)
-        .map((set) => set.repetitions));
-
-      if (previous && currentWeight > previous.weight) {
-        achievements.push({
-          id: `${workout.id}:${exercise.id}:max-weight`,
-          exerciseName: exercise.name,
-          achievedAt: workout.performedAt,
-          currentWeight,
-          previousWeight: previous.weight,
-          improvement: currentWeight - previous.weight,
-          percentage: percentageChange(currentWeight, previous.weight),
-          repetitions,
-          volumeImprovementPercentage: currentVolume > previous.volume
-            ? percentageChange(currentVolume, previous.volume)
-            : null,
-        });
+    .sort((a, b) => new Date(a.performedAt).getTime() - new Date(b.performedAt).getTime() || new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime() || a.id.localeCompare(b.id))
+    .forEach((workout) => {
+      // A repeated exercise row within one session is still a single log.
+      const exercises = new Map<string, WorkoutExercise>();
+      for (const exercise of workout.exercises) {
+        const key = normalizeExerciseName(exercise.name);
+        const existing = exercises.get(key);
+        exercises.set(key, existing ? { ...existing, sets: [...existing.sets, ...exercise.sets] } : exercise);
       }
+      exercises.forEach((exercise, key) => {
+        const sets = exercise.sets.filter((set) => set.completed && set.type !== "warmup" && set.repetitions > 0);
+        if (!sets.length) return;
+        const counts = { reps: sets.reduce((total, set) => total + set.repetitions, 0), sets: sets.length };
+        const previousCounts = lastCounts.get(key);
+        if (previousCounts) for (const kind of ["reps", "sets"] as const) {
+          if (counts[kind] > previousCounts[kind]) achievements.push({
+            id: `${workout.id}:${exercise.id}:${kind}`, kind,
+            exerciseName: exercise.name, achievedAt: workout.performedAt,
+            currentCount: counts[kind], previousCount: previousCounts[kind],
+            improvement: counts[kind] - previousCounts[kind], percentage: percentageChange(counts[kind], previousCounts[kind]),
+          });
+        }
+        lastCounts.set(key, counts);
+        const currentWeight = maximumWeight(exercise);
+        if (currentWeight == null || currentWeight <= 0) return;
 
-      bests.set(key, {
-        weight: Math.max(previous?.weight ?? 0, currentWeight),
-        volume: Math.max(previous?.volume ?? 0, currentVolume),
+        const previous = bests.get(key);
+        const currentVolume = exerciseVolume(exercise);
+        const repetitions = Math.max(0, ...exercise.sets
+          .filter((set) => set.completed && set.type !== "warmup" && set.weight === currentWeight)
+          .map((set) => set.repetitions));
+
+        if (previous && currentWeight > previous.weight) {
+          achievements.push({
+            id: `${workout.id}:${exercise.id}:max-weight`,
+            kind: "weight",
+            exerciseName: exercise.name,
+            achievedAt: workout.performedAt,
+            currentWeight,
+            previousWeight: previous.weight,
+            improvement: currentWeight - previous.weight,
+            percentage: percentageChange(currentWeight, previous.weight),
+            repetitions,
+            volumeImprovementPercentage: currentVolume > previous.volume
+              ? percentageChange(currentVolume, previous.volume)
+              : null,
+          });
+        }
+
+        bests.set(key, {
+          weight: Math.max(previous?.weight ?? 0, currentWeight),
+          volume: Math.max(previous?.volume ?? 0, currentVolume),
+        });
       });
-    }));
+    });
 
   return achievements.sort((a, b) => new Date(b.achievedAt).getTime() - new Date(a.achievedAt).getTime());
 }

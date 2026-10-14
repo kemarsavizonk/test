@@ -160,6 +160,10 @@ textarea:focus-visible {
 .logger-catalog-note .btn { flex-shrink: 0; }
 .history-search { padding: 16px; margin-bottom: 20px; }
 .history-filters { display: grid; grid-template-columns: minmax(0,1fr) 180px; gap: 12px; }
+.history-detail-filters { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; margin-top: 16px; }
+.history-filter-summary { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 12px; color: var(--muted); font-size: 12px; }
+.achievement-previous { color: var(--muted); font-size: 12px; line-height: 1.6; margin: 12px 0 0; }
+.achievement-metric small { font-size: 13px; font-weight: 650; }
 .history-search-input { min-width: 0; position: relative; }
 .history-search-input > svg { position: absolute; left: 13px; top: 15px; color: #94a3b8; }
 .history-search-input input { padding-left: 42px; }
@@ -313,6 +317,7 @@ textarea:focus-visible {
   .dashboard-progress-card { padding: 18px; }
   .logger-catalog-note { align-items: stretch; flex-direction: column; gap: 10px; padding: 14px; }
   .history-filters { grid-template-columns: minmax(0,1fr); }
+  .history-detail-filters { grid-template-columns: minmax(0,1fr); }
   .exercise-history-card, .exercise-log, .custom-exercise-form { padding: 18px; }
   .exercise-history-metrics strong { font-size: 20px; }
   .exercise-log-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }

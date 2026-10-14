@@ -110,6 +110,18 @@ migration is needed. Preview names stay on the current device.
 - Estimated 1RM uses the Epley formula: `weight × (1 + reps ÷ 30)` for 1–30 repetitions.
 - A percentage change is omitted when the comparison value is zero, avoiding misleading infinity values.
 
+## Achievements and history filters
+
+Achievements recognize an all-time heavier top weight, increased total completed
+reps, and increased completed sets. Rep and set increases are compared with the
+previous completed log for that exercise; warm-ups, incomplete sets, and drafts
+are excluded. Bodyweight exercises can earn rep and set achievements. Each type
+has its own unread notification, which clears when Achievements is opened.
+
+History supports muscle-group, inclusive From/To date, status, and name filters
+in combination. Cards show the most recent matching log; opening an exercise
+still shows its full history. Use Clear filters to restore all exercises.
+
 ## Project structure
 
 - `src/app` — App Router pages, layouts, auth callback, and dashboard routes

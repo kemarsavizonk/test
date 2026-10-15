@@ -34,6 +34,7 @@ test("mobile exercise search narrows and a workout can be saved without sideways
   await search.fill("squat");
   await expect(page.getByRole("listbox").getByRole("option")).toHaveCount(10);
   await search.fill("barbell back squat");
+  await page.getByRole("dialog", { name: "Reuse a previous entry" }).getByRole("button", { name: "Start fresh", exact: true }).click();
   await expect(page.getByRole("listbox")).toBeHidden();
   await page.getByLabel("Equipment", { exact: false }).fill("Smith Machine");
   await page.getByLabel("Set 1 weight", { exact: true }).fill("60");
@@ -63,6 +64,7 @@ test("unread achievements clear on opening, remain new for that visit, and stay 
   await expect(page.getByRole("heading", { name: "Your training achievements", exact: true })).toBeVisible();
   await page.goto("/dashboard/workouts/new");
   await page.getByRole("combobox", { name: /^Exercise / }).fill("Barbell Back Squat");
+  await page.getByRole("dialog", { name: "Reuse a previous entry" }).getByRole("button", { name: "Start fresh", exact: true }).click();
   await page.getByLabel("Set 1 weight", { exact: true }).fill("60");
   await page.getByLabel("Set 1 repetitions").fill("10");
   await page.getByRole("button", { name: "Finish", exact: true }).first().click();

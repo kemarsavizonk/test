@@ -53,6 +53,7 @@ test("a custom exercise is saved to the profile, found in the logger, and logged
   await expect(page.getByRole("heading", { name: "Your exercise history", exact: true })).toBeVisible();
   await page.goto("/dashboard/workouts/new");
   await search.fill("Cable Press / Rotation");
+  await page.getByRole("dialog", { name: "Reuse a previous entry" }).getByRole("button", { name: "Start fresh", exact: true }).click();
   await page.getByLabel("Set 1 weight", { exact: true }).fill("35");
   await page.getByLabel("Set 1 repetitions").fill("10");
   await page.getByRole("button", { name: "Finish", exact: true }).first().click();

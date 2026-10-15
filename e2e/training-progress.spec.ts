@@ -7,6 +7,7 @@ test("logging more reps and sets alerts and stays read when revisited or units c
   await page.addInitScript((baseline) => { if (!localStorage.getItem("kemtech-preview-workouts-v1")) localStorage.setItem("kemtech-preview-workouts-v1", JSON.stringify([baseline])); }, session("baseline", 10));
   await page.goto("/dashboard/workouts/new");
   await page.getByRole("combobox", { name: /^Exercise / }).fill("Barbell Back Squat");
+  await page.getByRole("dialog", { name: "Reuse a previous entry" }).getByRole("button", { name: "Start fresh", exact: true }).click();
   await page.getByLabel("Set 1 weight", { exact: true }).fill("50");
   await page.getByLabel("Set 1 repetitions").fill("12");
   await page.getByRole("button", { name: "Add set", exact: true }).click();

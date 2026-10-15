@@ -59,6 +59,43 @@ textarea:focus-visible {
 .muted { color: var(--muted); }
 .grid-auto { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 18px; }
 .dashboard-page { max-width: 1180px; }
+.dashboard-suggested { margin-top: 20px; }
+.suggested-plan-card { width: 100%; padding: 20px; display: flex; gap: 14px; align-items: center; text-align: left; color: var(--ink); border-color: #cbd9fb; background: linear-gradient(120deg, #fff, #eff4ff); }
+.suggested-plan-card > div { flex: 1; min-width: 0; }
+.suggested-plan-card > svg { flex-shrink: 0; color: var(--brand); }
+.suggested-plan-card h2, .suggested-plan-empty h2 { margin: 0; font-size: 18px; letter-spacing: -.02em; }
+.suggested-plan-card p, .suggested-plan-empty p { margin: 7px 0 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.suggested-plan-card div > span { display: flex; align-items: center; gap: 5px; margin-top: 10px; font-size: 12px; color: var(--brand); font-weight: 750; }
+.suggested-plan-empty { padding: 20px; }
+.logger-copy-message { padding: 14px 16px; border: 1px solid #cad8fb; border-radius: 12px; background: var(--brand-pale); color: var(--brand); font-size: 14px; line-height: 1.5; }
+.reuse-overlay { position: fixed; z-index: 200; inset: 0; padding: max(16px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); background: rgba(15,23,42,.55); display: grid; place-items: center; }
+.reuse-dialog { width: min(780px, 100%); min-width: 0; max-height: 100%; overflow-y: auto; overscroll-behavior: contain; border-radius: 22px; background: var(--surface); box-shadow: 0 24px 80px rgba(15,23,42,.3); padding: 22px; }
+.reuse-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.reuse-header > div { min-width: 0; }
+.reuse-header h2 { margin: 7px 0 0; font-size: 26px; letter-spacing: -.035em; }
+.reuse-header > .btn { flex-shrink: 0; }
+.reuse-description { font-size: 14px; line-height: 1.6; color: var(--muted); }
+.reuse-entries { display: grid; gap: 16px; }
+.reuse-exercise { min-width: 0; background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 16px; }
+.reuse-exercise-heading { display: flex; align-items: flex-start; gap: 10px; }
+.reuse-exercise-heading > div { min-width: 0; }
+.reuse-exercise-heading h3 { margin: 0; font-size: 18px; overflow-wrap: anywhere; }
+.reuse-exercise-heading p { margin: 6px 0 0; font-size: 12px; line-height: 1.5; color: var(--muted); }
+.reuse-dialog input[type=checkbox] { width: 22px; height: 22px; accent-color: var(--brand); flex-shrink: 0; }
+.reuse-set { border-top: 1px solid var(--line); margin-top: 16px; padding-top: 14px; }
+.reuse-set-check { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 13px; margin-bottom: 12px; }
+.reuse-set-check > span { margin-left: auto; font-size: 12px; }
+.reuse-set-fields { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; }
+.reuse-actions { position: sticky; bottom: -22px; z-index: 2; display: flex; flex-wrap: wrap; gap: 10px; margin: 16px -22px -22px; padding: 14px 22px 22px; background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -8px 18px rgba(15,23,42,.04); }
+@media (max-width: 600px) {
+  .reuse-dialog { padding: 16px; border-radius: 18px; }
+  .reuse-header h2 { font-size: 23px; }
+  .reuse-set-fields { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .reuse-actions { flex-direction: column; bottom: -16px; margin: 16px -16px -16px; padding: 12px 16px 16px; }
+  .reuse-actions > .btn { width: 100%; }
+  .suggested-plan-card { padding: 16px; gap: 10px; }
+  .suggested-plan-card > .dashboard-progress-icon { display: none; }
+}
 .dashboard-page-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 20px; }
 .dashboard-page-header h1 { margin: 7px 0 0; font-size: clamp(24px, 3vw, 34px); line-height: 1.15; letter-spacing: -.04em; }
 .dashboard-page-header > div { min-width: 0; }

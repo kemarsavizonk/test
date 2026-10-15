@@ -102,6 +102,26 @@ and achievements. If it is blank, the app uses your first name. Nicknames are
 stored in the user's Supabase account metadata and work across devices; no SQL
 migration is needed. Preview names stay on the current device.
 
+## Reusing previous entries and suggested plans
+
+Selecting a previously logged exercise opens its latest completed entry. Use
+**Reuse entry as is** to copy every original set unchanged, or edit individual
+weights, reps, set types, and RPE, then choose **Use checked sets**. **Start fresh**
+skips copying. **Review previous entry** reopens the preview. Copies receive new
+exercise and set IDs; saved history is never modified by reusing it.
+
+From an exercise's history, **Log workout** prefills its latest completed log.
+**Reuse as new workout** on an individual dated entry copies that specific log.
+
+The dashboard's **Today’s Suggested Workout Plan** uses completed training from
+the last eight weeks on the current weekday. It includes exercises seen on at
+least half of those training dates, with their latest completed sets. A single
+past training day is labeled an initial suggestion. There is no invented plan
+when that weekday has no history. Preview the plan, choose exercises and sets,
+edit details, or cancel; copied plan sets start incomplete. Nothing is saved until
+Save draft or Finish is selected. This repeats observed logs rather than
+prescribing new exercises or increased loads.
+
 ## Calculation rules
 
 - Weight is stored in kilograms in PostgreSQL and converted for display.

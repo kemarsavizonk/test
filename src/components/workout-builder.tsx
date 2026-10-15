@@ -3,11 +3,14 @@
 import { Check, Copy, Dumbbell, GripVertical, Plus, Save, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { Button, Card, Field, PageHeader } from "@/components/ui";
 import { WeightDisplay } from "@/components/weight-display";
 import { useExerciseCatalog } from "@/hooks/use-exercise-catalog";
+import { useWorkouts } from "@/hooks/use-workouts";
+import { WorkoutReuseDialog } from "@/components/workout-reuse-dialog";
+import { copyExercise, previousExerciseLogs, type ReuseEntry, type SuggestedWorkoutPlan } from "@/lib/workout-reuse";
 import { MUSCLE_GROUPS } from "@/lib/constants";
 import { convertWeight, createId, exerciseVolume, normalizeExerciseName } from "@/lib/fitness";
 import { getPreferredWeightUnit, saveWorkout, updateWorkout } from "@/lib/workout-repository";
@@ -17,18 +20,22 @@ import { formatNumber } from "@/lib/utils";
 const newSet = (number: number) => ({ id: createId(), setNumber: number, weight: 0, repetitions: 0, completed: true, type: "working" as SetType });
 const newExercise = (): WorkoutExercise => ({ id: createId(), name: "", muscleGroup: "Chest", sets: [newSet(1)] });
 
-export function WorkoutBuilder({ initialWorkout, initialUnit }: { initialWorkout?: WorkoutSession; initialUnit?: WeightUnit }) {
+export function WorkoutBuilder({ initialWorkout, initialUnit, startingExercises, reviewPlan }: { initialWorkout?: WorkoutSession; initialUnit?: WeightUnit; startingExercises?: WorkoutExercise[]; reviewPlan?: SuggestedWorkoutPlan }) {
   const router = useRouter();
   const { catalog, loading: catalogLoading, error: catalogError } = useExerciseCatalog();
+  const { workouts: previousWorkouts, unit: historyUnit, loading: historyLoading, error: historyError } = useWorkouts();
   const approvedByName = new Map(catalog.map((item) => [normalizeExerciseName(item.name), item]));
   const [performedAt, setPerformedAt] = useState(format(initialWorkout ? new Date(initialWorkout.performedAt) : new Date(), "yyyy-MM-dd'T'HH:mm"));
   const [notes, setNotes] = useState(initialWorkout?.notes ?? "");
   const [duration, setDuration] = useState(initialWorkout?.durationMinutes ? String(initialWorkout.durationMinutes) : "");
   const [unit, setUnit] = useState<WeightUnit>(initialUnit ?? "lb");
-  const [exercises, setExercises] = useState<WorkoutExercise[]>(initialWorkout?.exercises ?? [newExercise()]);
+  const [exercises, setExercises] = useState<WorkoutExercise[]>(() => initialWorkout?.exercises ?? startingExercises?.map((exercise) => copyExercise(exercise)) ?? [newExercise()]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [activeExerciseId, setActiveExerciseId] = useState<string | null>(null);
+  const [reuse, setReuse] = useState<{ targetId: string | null; entries: ReuseEntry[] } | null>(() => reviewPlan?.entries.length ? { targetId: null, entries: reviewPlan.entries } : null);
+  const [copyMessage, setCopyMessage] = useState(startingExercises?.length ? "Previous exercise details copied into a new workout. Your original log is unchanged." : "");
+  useLayoutEffect(() => () => { setActiveExerciseId(null); }, []);
 
   useEffect(() => { if (!initialUnit) void getPreferredWeightUnit().then(setUnit); }, [initialUnit]);
   const totalSets = useMemo(() => exercises.reduce((sum, item) => sum + item.sets.length, 0), [exercises]);
@@ -38,9 +45,19 @@ export function WorkoutBuilder({ initialWorkout, initialUnit }: { initialWorkout
   const updateSet = (exerciseId: string, setId: string, key: string, value: string | boolean) => setExercises((items) => items.map((item) => item.id !== exerciseId ? item : { ...item, sets: item.sets.map((set) => set.id !== setId ? set : { ...set, [key]: typeof value === "string" && ["weight", "repetitions", "rpe"].includes(key) ? Number(value) : value }) }));
   const addSet = (id: string) => setExercises((items) => items.map((item) => item.id !== id ? item : { ...item, sets: [...item.sets, { ...newSet(item.sets.length + 1), weight: item.sets.at(-1)?.weight ?? 0, repetitions: item.sets.at(-1)?.repetitions ?? 0 }] }));
   const removeSet = (exerciseId: string, setId: string) => setExercises((items) => items.map((item) => item.id !== exerciseId ? item : { ...item, sets: item.sets.filter((set) => set.id !== setId).map((set, index) => ({ ...set, setNumber: index + 1 })) }));
+  const reviewPreviousEntry = (id: string, name: string) => {
+    const previous = previousExerciseLogs(previousWorkouts, name)[0];
+    if (previous) {
+      setReuse({ targetId: id, entries: [{ exercise: copyExercise(previous.exercise, { from: historyUnit, to: unit }), performedAt: previous.workout.performedAt }] });
+      setActiveExerciseId(null);
+    }
+  };
   const chooseKnownExercise = (id: string, value: string) => {
     const found = approvedByName.get(normalizeExerciseName(value));
     updateExercise(id, found ? { name: found.name, muscleGroup: found.muscleGroup, equipment: found.equipment, exerciseId: found.id } : { name: value });
+    if (found && normalizeExerciseName(exercises.find((exercise) => exercise.id === id)?.name ?? "") !== normalizeExerciseName(found.name)) {
+      reviewPreviousEntry(id, found.name);
+    }
   };
   const changeUnit = (nextUnit: WeightUnit) => {
     if (nextUnit === unit) return;
@@ -49,7 +66,10 @@ export function WorkoutBuilder({ initialWorkout, initialUnit }: { initialWorkout
   };
   const discard = () => {
     const hasEntry = Boolean(initialWorkout || notes || duration || exercises.some((exercise) => exercise.name || exercise.sets.some((set) => set.weight || set.repetitions)));
-    if (!hasEntry || window.confirm("Discard this workout without saving it?")) router.push("/dashboard");
+    if (!hasEntry || window.confirm("Discard this workout without saving it?")) {
+      if (!initialWorkout) { setExercises([newExercise()]); setNotes(""); setDuration(""); setCopyMessage(""); setReuse(null); setPerformedAt(format(new Date(), "yyyy-MM-dd'T'HH:mm")); }
+      router.push("/dashboard");
+    }
   };
   const submit = async (status: "draft" | "completed") => {
     setError("");
@@ -80,6 +100,7 @@ export function WorkoutBuilder({ initialWorkout, initialUnit }: { initialWorkout
         setNotes("");
         setDuration("");
         setExercises([newExercise()]);
+        setCopyMessage("");
       }
       setSaving(false);
       router.push("/dashboard/workouts");
@@ -97,7 +118,15 @@ export function WorkoutBuilder({ initialWorkout, initialUnit }: { initialWorkout
   </div>;
 
   return <div className="app-page workout-builder">
+    {reuse && <WorkoutReuseDialog entries={reuse.entries} unit={unit} plan={reuse.targetId === null} description={reuse.targetId === null && reviewPlan ? `Based on ${reviewPlan.trainingDays} previous ${reviewPlan.weekday} training day${reviewPlan.trainingDays === 1 ? "" : "s"} in the last eight weeks. Choose exercises and sets, or edit the copied details below.` : undefined} onClose={() => setReuse(null)} onUse={(copied) => {
+      if (reuse.targetId) updateExercise(reuse.targetId, { ...copied[0], id: reuse.targetId });
+      else setExercises(copied);
+      setCopyMessage(reuse.targetId ? "Previous sets copied. Your original log is unchanged." : "Suggested plan copied. Edit or remove exercises and sets, and mark sets complete as you train.");
+      setReuse(null);
+    }} />}
     <PageHeader eyebrow={initialWorkout ? "Edit workout" : "Workout logger"} title={initialWorkout ? "Correct your session" : "Record your session"} description="Choose an exercise, enter your weight and reps, then add more sets." action={actions} />
+    {copyMessage && <p className="logger-copy-message" role="status">{copyMessage}</p>}
+    {historyError && <p className="muted">Previous exercise details could not be loaded. You can still enter a new workout manually.</p>}
     {error && <div className="logger-error" role="alert">{error}</div>}
     <div className="logger-catalog-note"><p>Search preset exercises and the exercises you have added to your profile.</p><Link href="/dashboard/exercises/new" className="btn btn-secondary"><Plus size={17} /> Add custom exercise</Link></div>
     {catalogError && <div className="logger-error" role="alert">{catalogError}</div>}
@@ -121,7 +150,7 @@ export function WorkoutBuilder({ initialWorkout, initialUnit }: { initialWorkout
               <div className="logger-exercise-fields">
                 <Field label="Exercise" hint={exercise.name && !selected ? "Choose an exercise from the suggestions." : "Search your exercise list."}>
                   <div className="exercise-combobox" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setActiveExerciseId(null); }}>
-                    <input className="input" role="combobox" value={exercise.name} onFocus={() => setActiveExerciseId(exercise.id)}
+                    <input className="input" role="combobox" disabled={historyLoading || catalogLoading} value={exercise.name} onFocus={() => setActiveExerciseId(exercise.id)}
                       onChange={(event) => { setActiveExerciseId(exercise.id); chooseKnownExercise(exercise.id, event.target.value); }}
                       onKeyDown={(event) => {
                         if (event.key === "Escape") setActiveExerciseId(null);
@@ -156,7 +185,7 @@ export function WorkoutBuilder({ initialWorkout, initialUnit }: { initialWorkout
               <div className="logger-set-actions"><Button variant="secondary" onClick={() => addSet(exercise.id)}><Plus size={17} /> Add set</Button><Button variant="ghost" onClick={() => {
                 const last = exercise.sets.at(-1);
                 if (last) setExercises((items) => items.map((item) => item.id !== exercise.id ? item : { ...item, sets: [...item.sets, { ...last, id: createId(), setNumber: item.sets.length + 1 }] }));
-              }}><Copy size={17} /> Duplicate last</Button></div>
+              }}><Copy size={17} /> Duplicate last</Button>{selected && previousExerciseLogs(previousWorkouts, selected.name).length > 0 && <Button variant="ghost" onClick={() => reviewPreviousEntry(exercise.id, selected.name)}><Copy size={17} /> Review previous entry</Button>}</div>
               <textarea aria-label={`Exercise ${exerciseIndex + 1} notes`} className="input logger-notes" value={exercise.notes ?? ""} onChange={(event) => updateExercise(exercise.id, { notes: event.target.value })} placeholder="Exercise notes (optional)" />
             </div>
           </Card>;

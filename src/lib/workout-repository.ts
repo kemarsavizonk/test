@@ -3,13 +3,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { listExerciseCatalog } from "@/lib/exercise-repository";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { fromCanonicalKg, normalizeExerciseName, toCanonicalKg } from "@/lib/fitness";
+import { convertWeight, fromCanonicalKg, normalizeExerciseName, toCanonicalKg } from "@/lib/fitness";
 import type { WeightUnit, WorkoutSession } from "@/lib/types";
 
 export const WORKOUTS_CHANGED = "kemtech-workouts-changed";
 const notifyWorkoutsChanged = () => window.dispatchEvent(new Event(WORKOUTS_CHANGED));
 
 const LOCAL_KEY = "kemtech-preview-workouts-v1";
+interface LocalWorkout extends WorkoutSession { weightUnit?: WeightUnit }
 async function validateExercises(workout: WorkoutSession) {
   const catalog = new Set((await listExerciseCatalog()).map((item) => normalizeExerciseName(item.name)));
   const invalid = workout.exercises.find((item) => !catalog.has(normalizeExerciseName(item.name)));
@@ -80,16 +81,16 @@ function decodeExerciseMetadata(value: string | null, fallbackMuscleGroup: strin
   return { muscleGroup: fallbackMuscleGroup, notes: value, equipment: undefined };
 }
 
-function readLocal(): WorkoutSession[] {
+function readLocal(): LocalWorkout[] {
   if (typeof window === "undefined") return [];
   try {
-    return JSON.parse(localStorage.getItem(LOCAL_KEY) ?? "[]") as WorkoutSession[];
+    return JSON.parse(localStorage.getItem(LOCAL_KEY) ?? "[]") as LocalWorkout[];
   } catch {
     return [];
   }
 }
 
-function writeLocal(workouts: WorkoutSession[]) {
+function writeLocal(workouts: LocalWorkout[]) {
   localStorage.setItem(LOCAL_KEY, JSON.stringify(workouts));
 }
 
@@ -138,7 +139,14 @@ async function insertWorkoutExercises(supabase: SupabaseClient, userId: string, 
 export async function listWorkouts(): Promise<WorkoutSession[]> {
   const supabase = createSupabaseBrowserClient();
   const user = await getCurrentUser();
-  if (!supabase || !user) return readLocal();
+  if (!supabase || !user) {
+    const displayUnit = await getPreferredWeightUnit();
+    return readLocal().map(({ weightUnit, ...workout }) => ({
+      ...workout,
+      // Untagged legacy preview logs retain their existing preferred-unit interpretation.
+      exercises: workout.exercises.map((exercise) => ({ ...exercise, sets: exercise.sets.map((set) => ({ ...set, weight: convertWeight(set.weight, weightUnit ?? displayUnit, displayUnit) })) })),
+    }));
+  }
 
   const data: DatabaseWorkout[] = [];
   const batchSize = 100;
@@ -207,7 +215,7 @@ export async function saveWorkout(workout: WorkoutSession, displayUnit: WeightUn
   const user = await getCurrentUser();
   if (!supabase || !user) {
     const existing = readLocal();
-    const next = [workout, ...existing.filter((item) => item.id !== workout.id)];
+    const next = [{ ...workout, weightUnit: displayUnit }, ...existing.filter((item) => item.id !== workout.id)];
     writeLocal(next);
     notifyWorkoutsChanged();
     return workout;
@@ -238,7 +246,7 @@ export async function updateWorkout(workout: WorkoutSession, displayUnit: Weight
   const supabase = createSupabaseBrowserClient();
   const user = await getCurrentUser();
   if (!supabase || !user) {
-    writeLocal([workout, ...readLocal().filter((item) => item.id !== workout.id)]);
+    writeLocal([{ ...workout, weightUnit: displayUnit }, ...readLocal().filter((item) => item.id !== workout.id)]);
     notifyWorkoutsChanged();
     return workout;
   }

@@ -75,6 +75,10 @@ textarea:focus-visible {
 .reuse-header h2 { margin: 5px 0 0; font-size: 24px; letter-spacing: -.035em; }
 .reuse-header > .btn { flex-shrink: 0; }
 .reuse-description { margin: 10px 0 14px; font-size: 13px; line-height: 1.5; color: var(--muted); }
+.reuse-unit-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; font-size: 12px; font-weight: 700; color: var(--muted); }
+.reuse-unit-toggle { display: flex; gap: 3px; padding: 3px; border: 1px solid #d5dff5; border-radius: 11px; background: #fff; }
+.reuse-unit-toggle button { min-width: 48px; min-height: 36px; padding: 4px 10px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); font-size: 14px; font-weight: 750; }
+.reuse-unit-toggle button[aria-pressed=true] { background: var(--brand); color: #fff; }
 .reuse-entries { display: grid; gap: 16px; }
 .reuse-exercise { min-width: 0; background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 16px; }
 .reuse-exercise-heading { display: flex; align-items: flex-start; gap: 10px; }
@@ -98,11 +102,13 @@ textarea:focus-visible {
   .reuse-header h2 { font-size: 20px; }
   .reuse-header .eyebrow { font-size: 10px; }
   .reuse-header > .btn { padding: 9px; }
-  .reuse-exercise { padding: 10px; }
+  .reuse-description { margin: 6px 0 8px; }
+  .reuse-exercise { padding: 8px; }
   .reuse-exercise-heading h3 { font-size: 16px; }
   .reuse-exercise-heading p { margin-top: 4px; font-size: 11px; }
   .reuse-set, .reuse-set-headings { grid-template-columns: 36px minmax(0,1.2fr) minmax(0,.75fr) minmax(0,1.25fr) minmax(0,.7fr); gap: 4px; }
   .reuse-set .input { padding: 8px 3px; border-radius: 7px; }
+  .reuse-set { padding-block: 4px; }
   .reuse-weight .input { padding-top: 2px; padding-bottom: 16px; }
   .reuse-weight small { left: 4px; max-width: calc(100% - 6px); }
   .reuse-set-check input[type=checkbox] { width: 20px; height: 20px; }

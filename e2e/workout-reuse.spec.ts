@@ -185,6 +185,109 @@ test("reuse respects entry units and validates empty selections without changing
   expect(saved).toEqual([source]);
 });
 
+for (const plan of [false, true]) for (const asIs of [false, true]) {
+  test(`${plan ? "suggested plan" : "reuse"} converts edited weights both ways and applies ${asIs ? "original" : "checked"} sets in the chosen unit`, async ({ page }) => {
+    await page.clock.setFixedTime(new Date("2026-10-15T12:00:00Z"));
+    const source = session("unit-source", "2026-10-08", 50, plan);
+    await seed(page, [source]);
+    if (plan) {
+      await page.goto("/dashboard");
+      await page.getByRole("button", { name: /Today’s Suggested Workout Plan/ }).click();
+    } else {
+      await page.goto("/dashboard/workouts/new");
+      await page.getByRole("combobox", { name: /^Exercise / }).fill("Barbell Back Squat");
+    }
+    const dialog = page.getByRole("dialog", { name: plan ? "Today’s Suggested Workout Plan" : "Reuse a previous entry", exact: true });
+    const units = dialog.getByRole("group", { name: "Preview weight unit", exact: true });
+    const weight = dialog.getByRole("spinbutton", { name: "Barbell Back Squat previous set 1 weight", exact: true });
+    const secondWeight = dialog.getByRole("spinbutton", { name: "Barbell Back Squat previous set 2 weight", exact: true });
+    await expect(units.getByRole("button", { name: "Pounds (lb)", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await units.getByRole("button", { name: "Kilograms (kg)", exact: true }).click();
+    expect(Number(await weight.inputValue())).toBeCloseTo(22.6796, 3);
+    await weight.fill("60");
+    await dialog.getByRole("spinbutton", { name: "Barbell Back Squat previous set 1 reps", exact: true }).fill("12");
+    await dialog.getByRole("checkbox", { name: "Reuse Barbell Back Squat set 2", exact: true }).uncheck();
+    if (plan) await dialog.getByRole("checkbox", { name: "Include Barbell Bench Press", exact: true }).uncheck();
+    await units.getByRole("button", { name: "Pounds (lb)", exact: true }).click();
+    await expect(weight).toHaveValue("132.28");
+    expect(Number(await secondWeight.inputValue())).toBeCloseTo(55, 6);
+    await expect(dialog.getByRole("checkbox", { name: "Reuse Barbell Back Squat set 2", exact: true })).not.toBeChecked();
+    if (plan) {
+      await dialog.getByRole("checkbox", { name: "Include Barbell Bench Press", exact: true }).check();
+      expect(Number(await dialog.getByRole("spinbutton", { name: "Barbell Bench Press previous set 1 weight", exact: true }).inputValue())).toBeCloseTo(50, 6);
+      await dialog.getByRole("checkbox", { name: "Include Barbell Bench Press", exact: true }).uncheck();
+    }
+    await units.getByRole("button", { name: "Kilograms (kg)", exact: true }).click();
+    expect(Number(await weight.inputValue())).toBeCloseTo(60, 6);
+    await page.setViewportSize({ width: 320, height: 700 });
+    expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+    if (!plan && !asIs) await page.screenshot({ path: "/private/tmp/kemtech-reuse-unit-selector.png" });
+    await dialog.getByRole("button", { name: asIs ? (plan ? "Use entire plan as is" : "Reuse entry as is") : "Use checked sets", exact: true }).click();
+    await expect(page.getByRole("combobox", { name: "Weight entry unit", exact: true })).toHaveValue("kg");
+    const squat = page.locator(".logger-exercise").filter({ has: page.locator('input[role="combobox"][value="Barbell Back Squat"]') });
+    expect(Number(await squat.getByLabel("Set 1 weight", { exact: true }).inputValue())).toBeCloseTo(asIs ? 22.6796 : 60, 3);
+    await expect(squat.getByLabel("Set 1 repetitions", { exact: true })).toHaveValue(asIs ? "10" : "12");
+    await expect(page.locator(".logger-set")).toHaveCount(asIs ? (plan ? 4 : 2) : 1);
+    // Changing units again in the logger uses the same physical load, not a double conversion.
+    await page.getByRole("combobox", { name: "Weight entry unit", exact: true }).selectOption("lb");
+    expect(Number(await squat.getByLabel("Set 1 weight", { exact: true }).inputValue())).toBeCloseTo(asIs ? 50 : 132.2774, 3);
+    await page.getByRole("combobox", { name: "Weight entry unit", exact: true }).selectOption("kg");
+    await page.getByRole("button", { name: "Save draft", exact: true }).first().click();
+    await expect(page).toHaveURL(/\/dashboard\/workouts$/);
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("kemtech-preview-workouts-v1")!));
+    expect(saved.find((item: { id: string }) => item.id === "unit-source")).toEqual(source);
+    expect(saved[0].weightUnit).toBe("kg");
+    expect(saved[0].exercises.find((item: { name: string }) => item.name === "Barbell Back Squat").sets[0].weight).toBeCloseTo(asIs ? 22.6796 : 60, 3);
+  });
+}
+
+test("canceling a unit-switched reuse preview leaves unsaved logger weights alone", async ({ page }) => {
+  const source = session("unit-source", "2026-10-08");
+  await seed(page, [source]);
+  await page.goto("/dashboard/workouts/new");
+  await page.getByRole("combobox", { name: /^Exercise / }).fill("Barbell Back Squat");
+  const dialog = page.getByRole("dialog", { name: "Reuse a previous entry", exact: true });
+  await dialog.getByRole("button", { name: "Start fresh", exact: true }).click();
+  await page.getByLabel("Set 1 weight", { exact: true }).fill("75");
+  await page.getByLabel("Set 1 repetitions", { exact: true }).fill("12");
+  await page.getByRole("button", { name: "Review previous entry", exact: true }).click();
+  await dialog.getByRole("button", { name: "Kilograms (kg)", exact: true }).click();
+  await dialog.getByRole("button", { name: "Close reuse preview", exact: true }).click();
+  await expect(page.getByRole("combobox", { name: "Weight entry unit", exact: true })).toHaveValue("lb");
+  await expect(page.getByLabel("Set 1 weight", { exact: true })).toHaveValue("75");
+  await expect(page.getByLabel("Set 1 repetitions", { exact: true })).toHaveValue("12");
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("kemtech-preview-workouts-v1")!))).toEqual([source]);
+});
+
+test("kg profiles can reuse in pounds without changing other exercises' physical weights", async ({ page }) => {
+  const source = { ...session("kg-profile-source", "2026-10-08"), weightUnit: "lb" };
+  await seed(page, [source]);
+  await page.addInitScript(() => localStorage.setItem("kemtech-preview-settings", JSON.stringify({ unit: "kg" })));
+  await page.goto("/dashboard/workouts/new");
+  await expect(page.getByRole("combobox", { name: "Weight entry unit", exact: true })).toHaveValue("kg");
+  await page.getByRole("combobox", { name: /^Exercise / }).fill("Barbell Bench Press");
+  await page.getByLabel("Set 1 weight", { exact: true }).fill("25");
+  await page.getByLabel("Set 1 repetitions", { exact: true }).fill("10");
+  await page.getByRole("button", { name: "Add another exercise", exact: true }).click();
+  await page.getByRole("combobox", { name: /^Exercise / }).nth(1).fill("Barbell Back Squat");
+  const dialog = page.getByRole("dialog", { name: "Reuse a previous entry", exact: true });
+  await expect(dialog.getByRole("button", { name: "Kilograms (kg)", exact: true })).toHaveAttribute("aria-pressed", "true");
+  expect(Number(await dialog.getByRole("spinbutton", { name: "Barbell Back Squat previous set 1 weight", exact: true }).inputValue())).toBeCloseTo(22.6796, 3);
+  await dialog.getByRole("button", { name: "Pounds (lb)", exact: true }).click();
+  await dialog.getByRole("spinbutton", { name: "Barbell Back Squat previous set 1 weight", exact: true }).fill("100");
+  await dialog.getByRole("button", { name: "Use checked sets", exact: true }).click();
+  await expect(page.getByRole("combobox", { name: "Weight entry unit", exact: true })).toHaveValue("lb");
+  expect(Number(await page.getByLabel("Set 1 weight", { exact: true }).nth(0).inputValue())).toBeCloseTo(55.1156, 3);
+  await expect(page.getByLabel("Set 1 weight", { exact: true }).nth(1)).toHaveValue("100");
+  await page.getByRole("button", { name: "Finish", exact: true }).first().click();
+  await expect(page).toHaveURL(/\/dashboard\/workouts$/);
+  await page.getByRole("link", { name: /Barbell Back Squat/ }).filter({ visible: true }).first().click();
+  // The saved 100 lb entry is displayed as 45.4 kg in a kg account, not 100 kg.
+  await expect(page.locator(".exercise-log").first()).toContainText("45.4 kg");
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("kemtech-preview-workouts-v1")!));
+  expect(saved.find((item: { id: string }) => item.id === source.id)).toEqual(source);
+});
+
 test("weekday suggested plan previews all exercises and supports choosing and editing sets", async ({ page }) => {
   await page.clock.setFixedTime(new Date("2026-10-15T12:00:00Z"));
   const older = session("older", "2026-10-01", 40, true);

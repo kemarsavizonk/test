@@ -118,7 +118,9 @@ export function WorkoutBuilder({ initialWorkout, initialUnit, startingExercises,
   </div>;
 
   return <div className="app-page workout-builder">
-    {reuse && <WorkoutReuseDialog entries={reuse.entries} unit={unit} plan={reuse.targetId === null} planDate={reviewPlan?.date} description={reuse.targetId === null && reviewPlan ? `For ${format(new Date(`${reviewPlan.date}T12:00:00`), "EEEE, MMM d, yyyy")} · Based on ${reviewPlan.trainingDays} previous ${reviewPlan.weekday} training day${reviewPlan.trainingDays === 1 ? "" : "s"} in the preceding eight weeks.` : undefined} onClose={() => setReuse(null)} onUse={(copied) => {
+    {reuse && <WorkoutReuseDialog entries={reuse.entries} unit={unit} plan={reuse.targetId === null} planDate={reviewPlan?.date} description={reuse.targetId === null && reviewPlan ? `For ${format(new Date(`${reviewPlan.date}T12:00:00`), "EEEE, MMM d, yyyy")} · Based on ${reviewPlan.trainingDays} previous ${reviewPlan.weekday} training day${reviewPlan.trainingDays === 1 ? "" : "s"} in the preceding eight weeks.` : undefined} onClose={() => setReuse(null)} onUse={(copied, copiedUnit) => {
+      // Keep existing exercises and imported sets in the same entry unit.
+      changeUnit(copiedUnit);
       if (reuse.targetId) updateExercise(reuse.targetId, { ...copied[0], id: reuse.targetId });
       else setExercises(copied);
       setCopyMessage(reuse.targetId ? "Previous sets copied. Your original log is unchanged." : "Suggested plan copied. Edit or remove exercises and sets, and mark sets complete as you train.");

@@ -112,6 +112,12 @@ on one row per set, with shared column labels and compact copy actions. Long log
 remain scrollable. **Review previous entry** reopens the preview. Copies receive new
 exercise and set IDs; saved history is never modified by reusing it.
 
+Both the reuse and suggested-plan previews include a **KG / LB** selector.
+Switching converts all weights, including edited or unchecked sets, while showing
+the other unit below each weight. Applying checked sets or an unchanged entry
+carries the chosen unit into the logger and converts any other unsaved exercises
+to match. Canceling the preview leaves the logger's unit and saved history alone.
+
 From an exercise's history, **Log workout** prefills the exercise information only,
 with a blank set for new weights and reps.
 **Reuse as new workout** on an individual dated entry copies that specific log.

@@ -30,5 +30,7 @@ function WorkoutFromSource({ query }: { query: string }) {
   const history = buildExerciseHistory(workouts).find((item) => item.key === normalizeExerciseName(exercise!));
   const log = params.get("fromLog") ? history?.logs.find((item) => item.workout.id === params.get("fromLog")) : history?.logs.find((item) => item.workout.status === "completed") ?? history?.logs[0];
   if (!log) return <div className="app-page"><h1>Previous log not found</h1><p>It may have been deleted. Your saved history has not been changed.</p><Link href="/dashboard/workouts/new" className="btn btn-primary">Start a blank workout</Link></div>;
-  return <WorkoutBuilder key={params.toString()} initialUnit={unit} startingExercises={[log.exercise]} />;
+  // The history header starts a fresh log; only an explicit dated reuse copies sets.
+  const startingExercise = params.get("fromLog") ? log.exercise : { ...log.exercise, sets: [] };
+  return <WorkoutBuilder key={params.toString()} initialUnit={unit} startingExercises={[startingExercise]} />;
 }

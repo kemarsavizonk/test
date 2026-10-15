@@ -60,15 +60,18 @@ test("reuse as is ignores preview edits, while Start fresh leaves an empty set",
   await expect(page.locator(".logger-set")).toHaveCount(1);
 });
 
-test("history starts with the latest exercise, and a specific older log can be reused", async ({ page }) => {
+test("history starts with exercise details and blank sets, while explicit dated reuse copies sets", async ({ page }) => {
   const older = session("older", "2026-10-01", 40);
   const newer = session("newer", "2026-10-08", 50);
   await seed(page, [older, newer]);
   await page.goto("/dashboard/workouts/exercise/barbell%20back%20squat");
   await page.getByRole("button", { name: "Log workout", exact: true }).click();
   await expect(page.getByRole("combobox", { name: /^Exercise / })).toHaveValue("Barbell Back Squat");
-  await expect(page.getByLabel("Set 1 weight", { exact: true })).toHaveValue("50");
-  await expect(page.locator(".logger-set")).toHaveCount(2);
+  await expect(page.getByLabel("Set 1 weight", { exact: true })).toHaveValue("");
+  await expect(page.getByLabel("Set 1 repetitions", { exact: true })).toHaveValue("");
+  await expect(page.getByRole("textbox", { name: /^Equipment/ })).toHaveValue("Smith Machine");
+  await expect(page.getByRole("combobox", { name: /^Muscle group/ })).toHaveValue("Quadriceps");
+  await expect(page.locator(".logger-set")).toHaveCount(1);
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.goto("/dashboard/workouts/exercise/barbell%20back%20squat");
   await page.locator(".exercise-log").nth(1).getByRole("button", { name: "Reuse as new workout", exact: true }).click();
@@ -79,6 +82,88 @@ test("history starts with the latest exercise, and a specific older log can be r
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("kemtech-preview-workouts-v1")!));
   expect(saved.find((workout: { id: string }) => workout.id === "older")).toEqual(older);
   expect(saved.find((workout: { id: string }) => workout.id === "newer")).toEqual(newer);
+});
+
+test("five previous sets fit in compact single rows on mobile without scrolling", async ({ page }) => {
+  const source = session("five-sets", "2026-10-08");
+  source.exercises[0].sets = Array.from({ length: 5 }, (_, index) => ({ ...source.exercises[0].sets[0], id: `compact-${index}`, setNumber: index + 1 }));
+  await seed(page, [source]);
+  await page.goto("/dashboard/workouts/new");
+  await page.getByRole("combobox", { name: /^Exercise / }).fill("Barbell Back Squat");
+  const dialog = page.getByRole("dialog", { name: "Reuse a previous entry", exact: true });
+  for (const viewport of [{ width: 390, height: 844 }, { width: 320, height: 700 }, { width: 1280, height: 800 }]) {
+    await page.setViewportSize(viewport);
+    await expect(dialog.locator(".reuse-set")).toHaveCount(5);
+    const layout = await dialog.evaluate((element) => {
+      const rows = Array.from(element.querySelectorAll(".reuse-set"));
+      return {
+        scrolls: element.scrollHeight > element.clientHeight + 1,
+        overflows: element.scrollWidth > element.clientWidth + 1,
+        aligned: rows.every((row) => {
+          const fields = Array.from(row.querySelectorAll(".input")).map((input) => input.getBoundingClientRect());
+          return fields.length === 4 && fields.every((rect) => Math.abs(rect.top - fields[0].top) < 1 && rect.height >= 44);
+        }),
+      };
+    });
+    expect(layout, `Reuse layout at ${viewport.width}×${viewport.height}`).toEqual({ scrolls: false, overflows: false, aligned: true });
+    await dialog.getByRole("button", { name: "Use checked sets", exact: true }).click({ trial: true });
+    if (viewport.width === 390) await page.screenshot({ path: "/private/tmp/kemtech-compact-five-sets.png" });
+  }
+});
+
+test("long previous logs remain scrollable with reuse actions reachable", async ({ page }) => {
+  const source = session("long-log", "2026-10-08");
+  source.exercises[0].sets = Array.from({ length: 20 }, (_, index) => ({ ...source.exercises[0].sets[0], id: `long-${index}`, setNumber: index + 1 }));
+  await seed(page, [source]);
+  await page.goto("/dashboard/workouts/new");
+  await page.getByRole("combobox", { name: /^Exercise / }).fill("Barbell Back Squat");
+  const dialog = page.getByRole("dialog", { name: "Reuse a previous entry", exact: true });
+  await expect(dialog.locator(".reuse-set")).toHaveCount(20);
+  expect(await dialog.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
+  await dialog.getByRole("spinbutton", { name: "Barbell Back Squat previous set 20 reps", exact: true }).fill("15");
+  await dialog.getByRole("button", { name: "Use checked sets", exact: true }).click();
+  await expect(page.locator(".logger-set")).toHaveCount(20);
+  await expect(page.getByLabel("Set 20 repetitions", { exact: true })).toHaveValue("15");
+});
+
+test("selected dashboard date changes suggested weekday, source logs and preview date", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-10-15T12:00:00Z"));
+  const older = session("older-thursday", "2026-10-01", 40);
+  const newer = session("newer-thursday", "2026-10-08", 60);
+  const friday = session("friday", "2026-10-09", 30);
+  friday.exercises[0].name = "Dumbbell Shoulder Press";
+  friday.exercises[0].muscleGroup = "Shoulders";
+  await seed(page, [older, newer, friday]);
+  await page.goto("/dashboard");
+  const card = page.getByRole("region", { name: "Suggested workout plan", exact: true });
+  await expect(card).toContainText("2 past Thursday training days");
+  await page.getByRole("button", { name: "Next day", exact: true }).click();
+  await expect(card).toContainText("Friday’s Suggested Workout Plan");
+  await expect(card).toContainText("October 16, 2026");
+  await expect(card).toContainText("1 past Friday training day");
+  await card.getByRole("button").click();
+  await expect(page).toHaveURL(/plan=2026-10-16/);
+  const fridayDialog = page.getByRole("dialog", { name: "Friday’s Suggested Workout Plan", exact: true });
+  await expect(fridayDialog).toContainText("Friday, Oct 16, 2026");
+  await expect(fridayDialog.getByRole("heading", { name: "Dumbbell Shoulder Press", exact: true })).toBeVisible();
+  await expect(fridayDialog.getByRole("heading", { name: "Barbell Back Squat", exact: true })).toHaveCount(0);
+  await fridayDialog.getByRole("button", { name: "Cancel plan", exact: true }).click();
+  await page.goto("/dashboard");
+  await page.getByRole("button", { name: "Choose training date", exact: true }).click();
+  await page.getByRole("dialog", { name: "Choose training date", exact: true }).getByRole("button", { name: "Thursday, October 8, 2026", exact: true }).click();
+  await expect(card).toContainText("October 8, 2026");
+  await expect(card).toContainText("1 past Thursday training day");
+  await card.getByRole("button").click();
+  const thursdayDialog = page.getByRole("dialog", { name: "Thursday’s Suggested Workout Plan", exact: true });
+  // No peeking at the selected day's or later logs: only the Oct 1 session is reused.
+  await expect(thursdayDialog.getByRole("spinbutton", { name: "Barbell Back Squat previous set 1 weight", exact: true })).toHaveValue("40");
+  await expect(thursdayDialog).toContainText("Thursday, Oct 8, 2026");
+  await thursdayDialog.getByRole("button", { name: "Cancel plan", exact: true }).click();
+  await page.goto("/dashboard");
+  await page.getByRole("button", { name: "Next day", exact: true }).click();
+  await page.getByRole("button", { name: "Next day", exact: true }).click();
+  await expect(card).toContainText("No earlier Saturday training pattern");
+  await expect(card.getByRole("button")).toHaveCount(0);
 });
 
 test("reuse respects entry units and validates empty selections without changing history", async ({ page }) => {

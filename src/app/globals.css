@@ -72,9 +72,9 @@ textarea:focus-visible {
 .reuse-dialog { width: min(780px, 100%); min-width: 0; max-height: 100%; overflow-y: auto; overscroll-behavior: contain; border-radius: 22px; background: var(--surface); box-shadow: 0 24px 80px rgba(15,23,42,.3); padding: 22px; }
 .reuse-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
 .reuse-header > div { min-width: 0; }
-.reuse-header h2 { margin: 7px 0 0; font-size: 26px; letter-spacing: -.035em; }
+.reuse-header h2 { margin: 5px 0 0; font-size: 24px; letter-spacing: -.035em; }
 .reuse-header > .btn { flex-shrink: 0; }
-.reuse-description { font-size: 14px; line-height: 1.6; color: var(--muted); }
+.reuse-description { margin: 10px 0 14px; font-size: 13px; line-height: 1.5; color: var(--muted); }
 .reuse-entries { display: grid; gap: 16px; }
 .reuse-exercise { min-width: 0; background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 16px; }
 .reuse-exercise-heading { display: flex; align-items: flex-start; gap: 10px; }
@@ -82,17 +82,33 @@ textarea:focus-visible {
 .reuse-exercise-heading h3 { margin: 0; font-size: 18px; overflow-wrap: anywhere; }
 .reuse-exercise-heading p { margin: 6px 0 0; font-size: 12px; line-height: 1.5; color: var(--muted); }
 .reuse-dialog input[type=checkbox] { width: 22px; height: 22px; accent-color: var(--brand); flex-shrink: 0; }
-.reuse-set { border-top: 1px solid var(--line); margin-top: 16px; padding-top: 14px; }
-.reuse-set-check { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 13px; margin-bottom: 12px; }
-.reuse-set-check > span { margin-left: auto; font-size: 12px; }
-.reuse-set-fields { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; }
+.reuse-set, .reuse-set-headings { display: grid; grid-template-columns: 42px minmax(0,1.2fr) minmax(0,.75fr) minmax(0,1.25fr) minmax(0,.7fr); gap: 8px; }
+.reuse-set-headings { margin-top: 12px; padding-bottom: 6px; align-items: end; font-size: 11px; font-weight: 700; color: var(--muted); }
+.reuse-set { border-top: 1px solid var(--line); padding: 6px 0; align-items: start; }
+.reuse-set .input { min-height: 44px; padding: 8px; font-size: 16px; }
+.reuse-set input[type=number] { appearance: textfield; -moz-appearance: textfield; }
+.reuse-set input::-webkit-inner-spin-button, .reuse-set input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.reuse-set-check { min-height: 44px; display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer; }
+.reuse-weight { min-width: 0; position: relative; }
+.reuse-weight .input { padding-top: 2px; padding-bottom: 16px; }
+.reuse-weight small { position: absolute; left: 9px; bottom: 3px; max-width: calc(100% - 12px); color: var(--muted); font-size: 10px; line-height: 12px; white-space: nowrap; pointer-events: none; }
 .reuse-actions { position: sticky; bottom: -22px; z-index: 2; display: flex; flex-wrap: wrap; gap: 10px; margin: 16px -22px -22px; padding: 14px 22px 22px; background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -8px 18px rgba(15,23,42,.04); }
 @media (max-width: 600px) {
   .reuse-dialog { padding: 16px; border-radius: 18px; }
-  .reuse-header h2 { font-size: 23px; }
-  .reuse-set-fields { grid-template-columns: repeat(2, minmax(0,1fr)); }
-  .reuse-actions { flex-direction: column; bottom: -16px; margin: 16px -16px -16px; padding: 12px 16px 16px; }
-  .reuse-actions > .btn { width: 100%; }
+  .reuse-header h2 { font-size: 20px; }
+  .reuse-header .eyebrow { font-size: 10px; }
+  .reuse-header > .btn { padding: 9px; }
+  .reuse-exercise { padding: 10px; }
+  .reuse-exercise-heading h3 { font-size: 16px; }
+  .reuse-exercise-heading p { margin-top: 4px; font-size: 11px; }
+  .reuse-set, .reuse-set-headings { grid-template-columns: 36px minmax(0,1.2fr) minmax(0,.75fr) minmax(0,1.25fr) minmax(0,.7fr); gap: 4px; }
+  .reuse-set .input { padding: 8px 3px; border-radius: 7px; }
+  .reuse-weight .input { padding-top: 2px; padding-bottom: 16px; }
+  .reuse-weight small { left: 4px; max-width: calc(100% - 6px); }
+  .reuse-set-check input[type=checkbox] { width: 20px; height: 20px; }
+  .reuse-actions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; bottom: -16px; margin: 12px -16px -16px; padding: 10px 16px 12px; }
+  .reuse-actions > .btn { min-width: 0; padding: 9px 6px; font-size: 13px; }
+  .reuse-actions > .btn:last-child { grid-column: 1 / -1; min-height: 36px; padding: 6px; }
   .suggested-plan-card { padding: 16px; gap: 10px; }
   .suggested-plan-card > .dashboard-progress-icon { display: none; }
 }

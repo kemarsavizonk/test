@@ -107,14 +107,19 @@ migration is needed. Preview names stay on the current device.
 Selecting a previously logged exercise opens its latest completed entry. Use
 **Reuse entry as is** to copy every original set unchanged, or edit individual
 weights, reps, set types, and RPE, then choose **Use checked sets**. **Start fresh**
-skips copying. **Review previous entry** reopens the preview. Copies receive new
+skips copying. The mobile preview keeps weight, reps, set type, and RPE together
+on one row per set, with shared column labels and compact copy actions. Long logs
+remain scrollable. **Review previous entry** reopens the preview. Copies receive new
 exercise and set IDs; saved history is never modified by reusing it.
 
-From an exercise's history, **Log workout** prefills its latest completed log.
+From an exercise's history, **Log workout** prefills the exercise information only,
+with a blank set for new weights and reps.
 **Reuse as new workout** on an individual dated entry copies that specific log.
 
-The dashboard's **Today’s Suggested Workout Plan** uses completed training from
-the last eight weeks on the current weekday. It includes exercises seen on at
+The dashboard's suggested workout follows the selected training date (today by
+default), with the matching weekday and date shown in the card and preview.
+It uses completed training from the eight weeks preceding that date on the same
+weekday, never logs from the selected day or later. It includes exercises seen on at
 least half of those training dates, with their latest completed sets. A single
 past training day is labeled an initial suggestion. There is no invented plan
 when that weekday has no history. Preview the plan, choose exercises and sets,

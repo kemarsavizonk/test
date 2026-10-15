@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSuggestedWorkoutPlan, copyExercise, previousExerciseLogs } from "@/lib/workout-reuse";
+import { buildSuggestedWorkoutPlan, copyExercise, previousExerciseLogs, suggestedWorkoutTitle } from "@/lib/workout-reuse";
 import type { WorkoutSession } from "@/lib/types";
 
 function session(id: string, day: string, name = "Barbell Back Squat", weight = 50): WorkoutSession {
@@ -54,5 +54,13 @@ describe("weekday suggestions", () => {
     expect(buildSuggestedWorkoutPlan([session("other-day", "2026-10-13")], today).entries).toEqual([]);
     const warmupOnly = session("warmup", "2026-10-08"); warmupOnly.exercises[0].sets.forEach((set) => { set.type = "warmup"; });
     expect(buildSuggestedWorkoutPlan([warmupOnly], today).entries).toEqual([]);
+  });
+  it("anchors historical suggestions to the selected date rather than the current day", () => {
+    const history = [session("historical", "2020-10-13", "Leg Press", 30), session("selected-day", "2020-10-20", "Leg Press", 40), session("later", "2026-10-13", "Leg Press", 90)];
+    const plan = buildSuggestedWorkoutPlan(history, new Date("2020-10-20T12:00:00"));
+    expect(plan).toMatchObject({ date: "2020-10-20", weekday: "Tuesday", trainingDays: 1 });
+    expect(plan.entries[0].exercise.sets[0].weight).toBe(30);
+    expect(suggestedWorkoutTitle(plan.date, "2026-10-15")).toBe("Tuesday’s Suggested Workout Plan");
+    expect(suggestedWorkoutTitle("2026-10-15", "2026-10-15")).toBe("Today’s Suggested Workout Plan");
   });
 });

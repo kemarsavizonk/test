@@ -10,7 +10,7 @@ import { TrainingCalendar } from "@/components/training-calendar";
 import { WeightDisplay } from "@/components/weight-display";
 import { useAchievements } from "@/components/achievement-provider";
 import { aggregatePeriod, createId, exerciseVolume, maximumWeight, normalizeExerciseName } from "@/lib/fitness";
-import { buildSuggestedWorkoutPlan } from "@/lib/workout-reuse";
+import { buildSuggestedWorkoutPlan, suggestedWorkoutTitle } from "@/lib/workout-reuse";
 import { exerciseHistoryUrl } from "@/lib/exercise-history";
 import { formatNumber } from "@/lib/utils";
 import { useWorkouts } from "@/hooks/use-workouts";
@@ -45,13 +45,14 @@ export default function DashboardPage() {
   const { workouts, unit, loading, error } = useWorkouts();
   const { achievements, unreadCount } = useAchievements();
   const today = useSyncExternalStore(subscribeToDate, getToday, () => "");
-  const suggested = today ? buildSuggestedWorkoutPlan(workouts, new Date(`${today}T12:00:00`)) : null;
   const [period, setPeriod] = useState<Period>("day");
   const [chosenDate, setChosenDate] = useState("");
   const [calendarOpen, setCalendarOpen] = useState(false);
   const dateTrigger = useRef<HTMLButtonElement>(null);
   const selectedDate = chosenDate || today || "2000-01-03";
   const anchor = new Date(`${selectedDate}T12:00:00`);
+  const suggested = today ? buildSuggestedWorkoutPlan(workouts, anchor) : null;
+  const suggestedTitle = today ? suggestedWorkoutTitle(selectedDate, today) : "Suggested Workout Plan";
   const interval = getInterval(anchor, period);
   const selectedWorkouts = workouts.filter((workout) => isWithinInterval(new Date(workout.performedAt), interval))
     .sort((a, b) => new Date(b.performedAt).getTime() - new Date(a.performedAt).getTime());
@@ -85,7 +86,7 @@ export default function DashboardPage() {
       </div>
       <div className="dashboard-summary-footer"><span><CalendarDays size={15} /> {metrics.daysTrained} day{metrics.daysTrained === 1 ? "" : "s"} trained</span><span>Warm-ups excluded</span></div>
     </section>
-    <section className="dashboard-suggested" aria-label="Suggested workout plan">{suggested?.entries.length ? <button className="card suggested-plan-card" onClick={() => router.push(`/dashboard/workouts/new?${new URLSearchParams({ plan: suggested.date, intent: createId() })}`)}><span className="dashboard-progress-icon"><Dumbbell size={25} /></span><div><h2>Today’s Suggested Workout Plan</h2><p>{suggested.entries.length} exercises · {suggested.entries.reduce((sum, entry) => sum + entry.exercise.sets.length, 0)} previously completed sets</p><p>Based on {suggested.trainingDays} past {suggested.weekday} training day{suggested.trainingDays === 1 ? "" : "s"}{suggested.trainingDays === 1 ? "—an initial suggestion, not an established routine" : " in the last eight weeks"}.</p><span>Review, choose sets, and customize <ChevronRight size={15} /></span></div><ChevronRight size={20} /></button> : <Card className="suggested-plan-empty"><h2>Today’s Suggested Workout Plan</h2><p>{loading || !today ? "Looking for your weekday training pattern…" : `No ${suggested?.weekday} training pattern yet. Log completed workouts on this weekday to build your suggestions.`}</p></Card>}</section>
+    <section className="dashboard-suggested" aria-label="Suggested workout plan">{suggested?.entries.length ? <button className="card suggested-plan-card" onClick={() => router.push(`/dashboard/workouts/new?${new URLSearchParams({ plan: suggested.date, intent: createId() })}`)}><span className="dashboard-progress-icon"><Dumbbell size={25} /></span><div><h2>{suggestedTitle}</h2><p>{format(anchor, "MMMM d, yyyy")} · {suggested.entries.length} exercises · {suggested.entries.reduce((sum, entry) => sum + entry.exercise.sets.length, 0)} previously completed sets</p><p>Based on {suggested.trainingDays} past {suggested.weekday} training day{suggested.trainingDays === 1 ? "" : "s"}{suggested.trainingDays === 1 ? "—an initial suggestion, not an established routine" : " in the preceding eight weeks"}.</p><span>Review, choose sets, and customize <ChevronRight size={15} /></span></div><ChevronRight size={20} /></button> : <Card className="suggested-plan-empty"><h2>{suggestedTitle}</h2><p>{loading || !today ? "Looking for your weekday training pattern…" : `No earlier ${suggested?.weekday} training pattern for ${format(anchor, "MMMM d, yyyy")} yet. Suggestions use completed workouts from the preceding eight weeks.`}</p></Card>}</section>
     <div className="dashboard-main-grid">
       <section className="dashboard-entries"><div className="dashboard-section-heading"><div><h2>{period === "day" ? "Your exercises" : `Exercises this ${period}`}</h2><p>{today ? periodLabel : "Loading your date…"}</p></div><Link href="/dashboard/workouts">History <ChevronRight size={16} /></Link></div>
         {loading ? <Card><p className="dashboard-loading muted">Loading your entries…</p></Card> : entries.length === 0 ? <Card><EmptyState icon={<Dumbbell />} title={`No workouts recorded for this ${period}`} description="Pick another date or record your first exercise for this period." action={<Link href="/dashboard/workouts/new" className="btn btn-primary"><Plus size={17} /> Add workout</Link>} /></Card> : <div className="dashboard-entry-cards">{entries.map(({ workout, exercise }) => {

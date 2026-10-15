@@ -6,6 +6,10 @@ import type { WeightUnit, WorkoutExercise, WorkoutSession } from "@/lib/types";
 export interface ReuseEntry { exercise: WorkoutExercise; performedAt: string }
 export interface SuggestedWorkoutPlan { date: string; weekday: string; trainingDays: number; entries: ReuseEntry[] }
 
+export function suggestedWorkoutTitle(date: string, today = format(new Date(), "yyyy-MM-dd")) {
+  return date === today ? "Today’s Suggested Workout Plan" : `${format(new Date(`${date}T12:00:00`), "EEEE")}’s Suggested Workout Plan`;
+}
+
 export function copyExercise(exercise: WorkoutExercise, options: { from?: WeightUnit; to?: WeightUnit; completed?: boolean } = {}): WorkoutExercise {
   return { ...exercise, id: createId(), sets: exercise.sets.map((set, index) => ({
     ...set, id: createId(), setNumber: index + 1,

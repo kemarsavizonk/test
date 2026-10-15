@@ -29,7 +29,7 @@ export function WorkoutBuilder({ initialWorkout, initialUnit, startingExercises,
   const [notes, setNotes] = useState(initialWorkout?.notes ?? "");
   const [duration, setDuration] = useState(initialWorkout?.durationMinutes ? String(initialWorkout.durationMinutes) : "");
   const [unit, setUnit] = useState<WeightUnit>(initialUnit ?? "lb");
-  const [exercises, setExercises] = useState<WorkoutExercise[]>(() => initialWorkout?.exercises ?? startingExercises?.map((exercise) => copyExercise(exercise)) ?? [newExercise()]);
+  const [exercises, setExercises] = useState<WorkoutExercise[]>(() => initialWorkout?.exercises ?? startingExercises?.map((exercise) => copyExercise({ ...exercise, sets: exercise.sets.length ? exercise.sets : [newSet(1)] })) ?? [newExercise()]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [activeExerciseId, setActiveExerciseId] = useState<string | null>(null);
@@ -118,7 +118,7 @@ export function WorkoutBuilder({ initialWorkout, initialUnit, startingExercises,
   </div>;
 
   return <div className="app-page workout-builder">
-    {reuse && <WorkoutReuseDialog entries={reuse.entries} unit={unit} plan={reuse.targetId === null} description={reuse.targetId === null && reviewPlan ? `Based on ${reviewPlan.trainingDays} previous ${reviewPlan.weekday} training day${reviewPlan.trainingDays === 1 ? "" : "s"} in the last eight weeks. Choose exercises and sets, or edit the copied details below.` : undefined} onClose={() => setReuse(null)} onUse={(copied) => {
+    {reuse && <WorkoutReuseDialog entries={reuse.entries} unit={unit} plan={reuse.targetId === null} planDate={reviewPlan?.date} description={reuse.targetId === null && reviewPlan ? `For ${format(new Date(`${reviewPlan.date}T12:00:00`), "EEEE, MMM d, yyyy")} · Based on ${reviewPlan.trainingDays} previous ${reviewPlan.weekday} training day${reviewPlan.trainingDays === 1 ? "" : "s"} in the preceding eight weeks.` : undefined} onClose={() => setReuse(null)} onUse={(copied) => {
       if (reuse.targetId) updateExercise(reuse.targetId, { ...copied[0], id: reuse.targetId });
       else setExercises(copied);
       setCopyMessage(reuse.targetId ? "Previous sets copied. Your original log is unchanged." : "Suggested plan copied. Edit or remove exercises and sets, and mark sets complete as you train.");

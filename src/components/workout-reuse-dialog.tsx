@@ -4,17 +4,19 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { format } from "date-fns";
 import { X } from "lucide-react";
-import { Button, Field } from "@/components/ui";
-import { WeightDisplay } from "@/components/weight-display";
-import { copyExercise, type ReuseEntry } from "@/lib/workout-reuse";
+import { Button } from "@/components/ui";
+import { convertWeight } from "@/lib/fitness";
+import { formatNumber } from "@/lib/utils";
+import { copyExercise, suggestedWorkoutTitle, type ReuseEntry } from "@/lib/workout-reuse";
 import type { WeightUnit, WorkoutExercise, WorkoutSet } from "@/lib/types";
 
-export function WorkoutReuseDialog({ entries, unit, plan = false, description, onUse, onClose }: {
-  entries: ReuseEntry[]; unit: WeightUnit; plan?: boolean; description?: string;
+export function WorkoutReuseDialog({ entries, unit, plan = false, planDate, description, onUse, onClose }: {
+  entries: ReuseEntry[]; unit: WeightUnit; plan?: boolean; planDate?: string; description?: string;
   onUse: (exercises: WorkoutExercise[]) => void; onClose: () => void;
 }) {
   const [rows, setRows] = useState(() => entries.map((entry) => ({ ...entry, included: true, sets: entry.exercise.sets.map((set) => ({ ...set, selected: true })) })));
   const [error, setError] = useState("");
+  const secondaryUnit = unit === "lb" ? "kg" : "lb";
   const root = useRef<HTMLDivElement>(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
@@ -43,16 +45,17 @@ export function WorkoutReuseDialog({ entries, unit, plan = false, description, o
   };
   if (typeof document === "undefined") return null;
   return createPortal(<div className="reuse-overlay" onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}><div ref={root} role="dialog" aria-modal="true" aria-labelledby="reuse-title" tabIndex={-1} className="reuse-dialog">
-    <header className="reuse-header"><div><div className="eyebrow">{plan ? "Your training pattern" : "Previous exercise log"}</div><h2 id="reuse-title">{plan ? "Today’s Suggested Workout Plan" : "Reuse a previous entry"}</h2></div><Button variant="ghost" aria-label="Close reuse preview" onClick={onClose}><X size={21} /></Button></header>
-    <p className="reuse-description">{description ?? "Your most recent completed log is below. Edit or check the sets you want to copy."} This creates a new entry; your previous workouts will not change.{plan && " Copied plan sets start incomplete—mark them complete as you train."}</p>
+    <header className="reuse-header"><div><div className="eyebrow">{plan ? "Your training pattern" : "Previous exercise log"}</div><h2 id="reuse-title">{plan ? (planDate ? suggestedWorkoutTitle(planDate) : "Suggested Workout Plan") : "Reuse a previous entry"}</h2></div><Button variant="ghost" aria-label="Close reuse preview" onClick={onClose}><X size={21} /></Button></header>
+    <p className="reuse-description">{description ?? "Edit or check sets to copy. Your saved history stays unchanged."}{plan && " Copied sets start incomplete; mark them complete as you train."}</p>
     <div className="reuse-entries">{rows.map((row, i) => <section className="reuse-exercise" key={row.exercise.id}>
       <div className="reuse-exercise-heading">{plan && <input type="checkbox" aria-label={`Include ${row.exercise.name}`} checked={row.included} onChange={(event) => setRows((items) => items.map((item, index) => index === i ? { ...item, included: event.target.checked } : item))} />}<div><h3>{row.exercise.name}</h3><p>{row.exercise.muscleGroup}{row.exercise.equipment ? ` · ${row.exercise.equipment}` : ""} · {format(new Date(row.performedAt), "MMM d, yyyy")}</p></div></div>
-      {row.included && row.sets.map((set, j) => <div className="reuse-set" key={`${set.id}:${j}`}><label className="reuse-set-check"><input type="checkbox" checked={set.selected} aria-label={`Reuse ${row.exercise.name} set ${j + 1}`} onChange={(event) => updateSet(i, j, { selected: event.target.checked })} /><strong>Set {j + 1}{!set.completed && " · Previously incomplete"}</strong><span className="muted"><WeightDisplay value={set.weight} unit={unit} compact /> × {set.repetitions}</span></label><div className="reuse-set-fields">
-        <Field label={`Weight (${unit})`}><input className="input" type="number" min="0" step="any" inputMode="decimal" aria-label={`${row.exercise.name} previous set ${j + 1} weight`} value={set.weight} onChange={(event) => updateSet(i, j, { weight: Number(event.target.value) })} /></Field>
-        <Field label="Reps"><input className="input" type="number" min="1" step="1" inputMode="numeric" aria-label={`${row.exercise.name} previous set ${j + 1} reps`} value={set.repetitions} onChange={(event) => updateSet(i, j, { repetitions: Number(event.target.value) })} /></Field>
-        <Field label="Set type"><select className="input" aria-label={`${row.exercise.name} previous set ${j + 1} type`} value={set.type} onChange={(event) => updateSet(i, j, { type: event.target.value as WorkoutSet["type"] })}>{["warmup", "working", "drop", "failure"].map((type) => <option key={type} value={type}>{type}</option>)}</select></Field>
-        <Field label="RPE"><input className="input" type="number" min="1" max="10" step="0.5" aria-label={`${row.exercise.name} previous set ${j + 1} RPE`} value={set.rpe ?? ""} placeholder="Optional" onChange={(event) => updateSet(i, j, { rpe: event.target.value ? Number(event.target.value) : undefined })} /></Field>
-      </div></div>)}
+      {row.included && <><div className="reuse-set-headings" aria-hidden="true"><span>Set</span><span>Weight<br />({unit})</span><span>Reps</span><span>Set type</span><span>RPE</span></div>{row.sets.map((set, j) => <div className="reuse-set" key={`${set.id}:${j}`}>
+        <label className="reuse-set-check" title={!set.completed ? "Previously incomplete" : `Set ${j + 1}`}><input type="checkbox" checked={set.selected} aria-label={`Reuse ${row.exercise.name} set ${j + 1}${!set.completed ? " (previously incomplete)" : ""}`} onChange={(event) => updateSet(i, j, { selected: event.target.checked })} /><strong>{j + 1}</strong></label>
+        <div className="reuse-weight"><input className="input" type="number" min="0" step="any" inputMode="decimal" aria-label={`${row.exercise.name} previous set ${j + 1} weight`} value={set.weight} onChange={(event) => updateSet(i, j, { weight: Number(event.target.value) })} /><small>{formatNumber(convertWeight(set.weight, unit, secondaryUnit), 1)} {secondaryUnit}</small></div>
+        <input className="input" type="number" min="1" step="1" inputMode="numeric" aria-label={`${row.exercise.name} previous set ${j + 1} reps`} value={set.repetitions} onChange={(event) => updateSet(i, j, { repetitions: Number(event.target.value) })} />
+        <select className="input" aria-label={`${row.exercise.name} previous set ${j + 1} type`} value={set.type} onChange={(event) => updateSet(i, j, { type: event.target.value as WorkoutSet["type"] })}>{[{ value: "warmup", label: "Warm" }, { value: "working", label: "Work" }, { value: "drop", label: "Drop" }, { value: "failure", label: "Fail" }].map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}</select>
+        <input className="input" type="number" min="1" max="10" step="0.5" inputMode="decimal" aria-label={`${row.exercise.name} previous set ${j + 1} RPE`} value={set.rpe ?? ""} placeholder="—" onChange={(event) => updateSet(i, j, { rpe: event.target.value ? Number(event.target.value) : undefined })} />
+      </div>)}</>}
     </section>)}</div>
     {error && <p className="logger-error" role="alert">{error}</p>}
     <footer className="reuse-actions"><Button onClick={() => onUse(entries.map((entry) => copyExercise(entry.exercise, { completed: plan ? false : undefined })))}>{plan ? "Use entire plan as is" : "Reuse entry as is"}</Button><Button variant="secondary" onClick={useChecked}>Use checked sets</Button><Button variant="ghost" onClick={onClose}>{plan ? "Cancel plan" : "Start fresh"}</Button></footer>

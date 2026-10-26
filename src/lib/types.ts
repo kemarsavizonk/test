@@ -102,4 +102,10 @@ export interface CountAchievement extends AchievementBase {
   previousCount: number;
 }
 
-export type PersonalBestAchievement = WeightAchievement | CountAchievement;
+export interface VolumeAchievement extends AchievementBase {
+  kind: "volume";
+  currentVolume: number;
+  previousVolume: number;
+}
+
+export type PersonalBestAchievement = WeightAchievement | CountAchievement | VolumeAchievement;

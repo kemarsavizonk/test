@@ -7,9 +7,9 @@ import { normalizeExerciseName, toCanonicalKg } from "@/lib/fitness";
 export function achievementNotificationKey(achievement: PersonalBestAchievement, unit: WeightUnit) {
   const identity = `${achievement.id.split(":")[0]}:${normalizeExerciseName(achievement.exerciseName)}`;
   // Preserve existing weight keys so previously read records stay read.
-  return achievement.kind === "weight"
-    ? `${identity}:${toCanonicalKg(achievement.currentWeight, unit).toFixed(3)}`
-    : `${identity}:${achievement.kind}:${achievement.currentCount}`;
+  if (achievement.kind === "weight") return `${identity}:${toCanonicalKg(achievement.currentWeight, unit).toFixed(3)}`;
+  if (achievement.kind === "volume") return `${identity}:volume:${toCanonicalKg(achievement.currentVolume, unit).toFixed(3)}`;
+  return `${identity}:${achievement.kind}:${achievement.currentCount}`;
 }
 
 export function unreadAchievementKeys(achievements: PersonalBestAchievement[], unit: WeightUnit, seen: string[]) {

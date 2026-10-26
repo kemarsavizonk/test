@@ -51,9 +51,9 @@ test("unread achievements clear on opening, remain new for that visit, and stay 
   await page.goto("/dashboard");
   await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
   const mobileTab = page.getByRole("navigation", { name: "Account navigation" }).getByRole("link", { name: /Achievements/ });
-  await expect(mobileTab.getByLabel("1 unread achievement", { exact: true })).toBeVisible();
+  await expect(mobileTab.getByLabel("2 unread achievements", { exact: true })).toBeVisible();
   await mobileTab.click();
-  await expect(page.getByRole("heading", { name: "1 new achievement!", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "2 new achievements!", exact: true })).toBeVisible();
   await expect(mobileTab.locator(".notification-badge")).toHaveCount(0);
   await page.getByRole("navigation", { name: "Account navigation" }).getByRole("link", { name: "Dashboard", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Your training dashboard", exact: true })).toBeVisible();
@@ -69,10 +69,10 @@ test("unread achievements clear on opening, remain new for that visit, and stay 
   await page.getByLabel("Set 1 repetitions").fill("10");
   await page.getByRole("button", { name: "Finish", exact: true }).first().click();
   await expect(page).toHaveURL(/\/dashboard\/workouts$/);
-  await expect(mobileTab.getByLabel("1 unread achievement", { exact: true })).toBeVisible();
+  await expect(mobileTab.getByLabel("2 unread achievements", { exact: true })).toBeVisible();
   await mobileTab.click();
-  await expect(page.getByRole("heading", { name: "1 new achievement!", exact: true })).toBeVisible();
-  await expect(page.locator(".achievement-row")).toHaveCount(2);
-  await expect(page.locator(".achievement-new")).toHaveCount(1);
+  await expect(page.getByRole("heading", { name: "2 new achievements!", exact: true })).toBeVisible();
+  await expect(page.locator(".achievement-row")).toHaveCount(4);
+  await expect(page.locator(".achievement-new")).toHaveCount(2);
   await page.screenshot({ path: "/private/tmp/kemtech-mobile-achievements.png", fullPage: true });
 });

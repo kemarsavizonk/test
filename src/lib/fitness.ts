@@ -129,7 +129,7 @@ export function buildLatestExerciseComparisons(workouts: WorkoutSession[]): Exer
 
 export function buildPersonalBestAchievements(workouts: WorkoutSession[]): PersonalBestAchievement[] {
   const bests = new Map<string, { weight: number; volume: number }>();
-  const lastCounts = new Map<string, { reps: number; sets: number }>();
+  const lastCounts = new Map<string, { reps: number; sets: number; volume: number }>();
   const achievements: PersonalBestAchievement[] = [];
 
   [...workouts]
@@ -147,6 +147,7 @@ export function buildPersonalBestAchievements(workouts: WorkoutSession[]): Perso
         const sets = exercise.sets.filter((set) => set.completed && set.type !== "warmup" && set.repetitions > 0);
         if (!sets.length) return;
         const counts = { reps: sets.reduce((total, set) => total + set.repetitions, 0), sets: sets.length };
+        const currentVolume = sets.reduce((total, set) => total + setVolume(set), 0);
         const previousCounts = lastCounts.get(key);
         if (previousCounts) for (const kind of ["reps", "sets"] as const) {
           if (counts[kind] > previousCounts[kind]) achievements.push({
@@ -156,12 +157,19 @@ export function buildPersonalBestAchievements(workouts: WorkoutSession[]): Perso
             improvement: counts[kind] - previousCounts[kind], percentage: percentageChange(counts[kind], previousCounts[kind]),
           });
         }
-        lastCounts.set(key, counts);
+        // Compare total work independently of the heaviest set. Ignore conversion noise.
+        if (previousCounts && currentVolume - previousCounts.volume > Math.max(1, currentVolume, previousCounts.volume) * 1e-9) achievements.push({
+          id: `${workout.id}:${exercise.id}:volume`, kind: "volume",
+          exerciseName: exercise.name, achievedAt: workout.performedAt,
+          currentVolume, previousVolume: previousCounts.volume,
+          improvement: currentVolume - previousCounts.volume,
+          percentage: percentageChange(currentVolume, previousCounts.volume),
+        });
+        lastCounts.set(key, { ...counts, volume: currentVolume });
         const currentWeight = maximumWeight(exercise);
         if (currentWeight == null || currentWeight <= 0) return;
 
         const previous = bests.get(key);
-        const currentVolume = exerciseVolume(exercise);
         const repetitions = Math.max(0, ...exercise.sets
           .filter((set) => set.completed && set.type !== "warmup" && set.weight === currentWeight)
           .map((set) => set.repetitions));

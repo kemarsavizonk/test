@@ -144,10 +144,15 @@ prescribing new exercises or increased loads.
 ## Achievements and history filters
 
 Achievements recognize an all-time heavier top weight, increased total completed
-reps, and increased completed sets. Rep and set increases are compared with the
+reps, increased completed sets, and increased total exercise volume (the sum of
+weight × reps for all completed working sets). Rep, set, and volume increases are compared with the
 previous completed log for that exercise; warm-ups, incomplete sets, and drafts
 are excluded. Bodyweight exercises can earn rep and set achievements. Each type
 has its own unread notification, which clears when Achievements is opened.
+Volume can improve without a heavier maximum set or more sets/reps—for example,
+three sets of 80 lb × 10 plus 65 lb × 10 is 3,050 lb of volume; four sets of
+80 lb × 10 is 3,200 lb, earning a +150 lb volume achievement. Notifications stay
+read when display units change, and historical logs are not modified.
 
 History supports muscle-group, inclusive From/To date, status, and name filters
 in combination. Cards show the most recent matching log; opening an exercise

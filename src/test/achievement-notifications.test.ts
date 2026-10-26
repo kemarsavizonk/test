@@ -19,4 +19,12 @@ describe("achievement notifications", () => {
     const next = { ...record, id: "session-2:exercise-2:max-weight", currentWeight: 60 };
     expect(unreadAchievementKeys([record, next], "kg", seen)).toEqual([achievementNotificationKey(next, "kg")]);
   });
+  it("keeps volume gains distinct from weight records and read after unit changes or row edits", () => {
+    const volume: PersonalBestAchievement = { id: "session-1:exercise-1:volume", kind: "volume", exerciseName: "Barbell Back Squat", achievedAt: record.achievedAt, currentVolume: 3200, previousVolume: 3050, improvement: 150, percentage: 150 / 3050 * 100 };
+    const seen = [achievementNotificationKey(volume, "lb")];
+    const converted = { ...volume, id: "session-1:replacement:volume", currentVolume: convertWeight(volume.currentVolume, "lb", "kg") };
+    expect(unreadAchievementKeys([converted], "kg", seen)).toEqual([]);
+    expect(achievementNotificationKey(volume, "lb")).not.toBe(achievementNotificationKey(record, "lb"));
+    expect(unreadAchievementKeys([{ ...volume, currentVolume: 3300 }], "lb", seen)).toHaveLength(1);
+  });
 });

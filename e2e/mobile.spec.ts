@@ -19,7 +19,7 @@ test.beforeEach(async ({ page }) => {
 test("mobile account screens fit the viewport, including populated history and reports", async ({ page }) => {
   for (const width of [320, 390]) {
     await page.setViewportSize({ width, height: 844 });
-    for (const route of ["/dashboard", "/dashboard/workouts/new", "/dashboard/workouts", "/dashboard/reports", "/dashboard/settings", "/dashboard/achievements", "/dashboard/exercises", "/dashboard/records"]) {
+    for (const route of ["/dashboard", "/dashboard/body-weight", "/dashboard/workouts/new", "/dashboard/workouts", "/dashboard/reports", "/dashboard/settings", "/dashboard/achievements", "/dashboard/exercises", "/dashboard/records"]) {
       await page.goto(route);
       await page.waitForLoadState("networkidle");
       const dimensions = await page.evaluate(() => ({ width: window.innerWidth, content: document.documentElement.scrollWidth }));

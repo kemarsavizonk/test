@@ -60,6 +60,55 @@ textarea:focus-visible {
 .grid-auto { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 18px; }
 .dashboard-page { max-width: 1180px; }
 .dashboard-suggested { margin-top: 20px; }
+.dashboard-body-weight { margin-top: 20px; }
+.body-weight-card { display: flex; align-items: center; gap: 16px; padding: 20px; background: linear-gradient(115deg,#fff,#f3f7ff); border-color: #d5dff5; }
+.body-weight-card > div { flex: 1; min-width: 0; }
+.body-weight-icon { width: 48px; height: 48px; display: grid; place-items: center; flex-shrink: 0; background: #eaf0ff; color: var(--brand); border-radius: 14px; }
+.body-weight-card h2 { margin: 7px 0 0; font-size: 24px; letter-spacing: -.025em; }
+.body-weight-card h2 .dual-weight { flex-direction: row; align-items: baseline; gap: 12px; }
+.body-weight-card h2 .dual-weight small { font-size: 15px; }
+.body-weight-card p { margin: 8px 0 0; color: var(--muted); font-size: 13px; }
+.body-weight-card-action { display: flex; gap: 5px; align-items: center; color: var(--brand); font-size: 13px; font-weight: 750; flex-shrink: 0; }
+.body-weight-page { max-width: 1000px; }
+.body-weight-back { display: inline-flex; align-items: center; gap: 7px; margin-bottom: 20px; color: var(--brand); font-size: 14px; font-weight: 700; }
+.body-weight-entry-card, .body-weight-chart-card { padding: 24px; margin-bottom: 24px; }
+.body-weight-section-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+.body-weight-section-title > div { flex: 1; min-width: 0; }
+.body-weight-section-title h2 { font-size: 20px; letter-spacing: -.02em; margin: 0; }
+.body-weight-section-title p { color: var(--muted); font-size: 13px; line-height: 1.5; margin: 6px 0 0; }
+.body-weight-form { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,1fr); gap: 18px; align-items: start; }
+.body-weight-form .input { font-size: 16px; }
+.body-weight-equivalent { min-height: 28px; font-size: 12px; }
+.body-weight-form-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 10px; }
+.body-weight-chart { height: 280px; width: 100%; min-width: 0; }
+.body-chart-tooltip { padding: 12px; display: grid; gap: 7px; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 4px 12px rgba(15,23,42,.12); font-size: 13px; }
+.body-weight-count { color: var(--brand); background: var(--brand-pale); border-radius: 99px; padding: 7px 10px; font-size: 12px; white-space: nowrap; }
+.body-weight-empty { padding: 32px 18px; text-align: center; color: var(--muted); font-size: 14px; line-height: 1.6; }
+.body-weight-empty svg { margin: 0 auto; color: var(--brand); }
+.body-weight-history-list { display: grid; gap: 12px; }
+.body-weight-history-entry { padding: 20px; }
+.body-weight-entry-main { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.body-weight-entry-main time { color: var(--muted); font-size: 13px; }
+.body-weight-entry-main h3 { font-size: 24px; margin: 10px 0 14px; }
+.body-weight-entry-actions { display: flex; gap: 3px; }
+.body-weight-entry-actions .btn { padding: 10px; }
+.body-weight-change { display: flex; align-items: flex-start; gap: 7px; color: #475569; font-size: 13px; line-height: 1.5; }
+.body-weight-change > svg { flex-shrink: 0; margin-top: 1px; }
+.body-weight-change .dual-weight { margin-left: 4px; vertical-align: top; }
+.body-weight-change > span > small { display: block; color: var(--muted); margin-top: 5px; }
+@media (max-width:600px) {
+  .body-weight-card { display: grid; grid-template-columns: 48px minmax(0,1fr); padding: 16px; gap: 12px; }
+  .body-weight-card h2 { font-size: 22px; }
+  .body-weight-card h2 .dual-weight { flex-wrap: wrap; gap: 4px 10px; }
+  .body-weight-card-action { grid-column: 2; margin-left: 0; }
+  .body-weight-entry-card, .body-weight-chart-card { padding: 18px 14px; }
+  .body-weight-form { grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 14px 10px; }
+  .body-weight-form > label:nth-child(3) { grid-column: 1 / -1; }
+  .body-weight-history-entry { padding: 18px 14px; }
+  .body-weight-chart { height: 240px; }
+  .body-weight-section-title h2 { font-size: 18px; }
+  .body-weight-entry-main time { font-size: 12px; }
+}
 .suggested-plan-card { width: 100%; padding: 20px; display: flex; gap: 14px; align-items: center; text-align: left; color: var(--ink); border-color: #cbd9fb; background: linear-gradient(120deg, #fff, #eff4ff); }
 .suggested-plan-card > div { flex: 1; min-width: 0; }
 .suggested-plan-card > svg { flex-shrink: 0; color: var(--brand); }

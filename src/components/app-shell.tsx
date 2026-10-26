@@ -1,6 +1,6 @@
 "use client";
 
-import { Award, BarChart3, BookOpen, Dumbbell, Home, LogOut, Menu, Plus, Smartphone, UserRound, X } from "lucide-react";
+import { Award, BarChart3, BookOpen, Dumbbell, Home, LogOut, Menu, Plus, Scale, Smartphone, UserRound, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -14,6 +14,7 @@ const items = [
   { href: "/dashboard/workouts/new", label: "Log workout", icon: Plus },
   { href: "/dashboard/workouts", label: "History", icon: Dumbbell, exact: true },
   { href: "/dashboard/exercises", label: "Exercises", icon: BookOpen },
+  { href: "/dashboard/body-weight", label: "Body weight", icon: Scale },
   { href: "/dashboard/reports", label: "Reports", icon: BarChart3 },
   { href: "/dashboard/achievements", label: "Achievements", icon: Award },
 ];

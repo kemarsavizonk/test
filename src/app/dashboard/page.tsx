@@ -15,6 +15,7 @@ import { exerciseHistoryUrl } from "@/lib/exercise-history";
 import { formatNumber } from "@/lib/utils";
 import { useWorkouts } from "@/hooks/use-workouts";
 import { usePreferredName } from "@/hooks/use-preferred-name";
+import { BodyWeightCard } from "@/components/body-weight-card";
 
 type Period = "day" | "week" | "month" | "year";
 
@@ -86,6 +87,7 @@ export default function DashboardPage() {
       </div>
       <div className="dashboard-summary-footer"><span><CalendarDays size={15} /> {metrics.daysTrained} day{metrics.daysTrained === 1 ? "" : "s"} trained</span><span>Warm-ups excluded</span></div>
     </section>
+    <BodyWeightCard />
     <section className="dashboard-suggested" aria-label="Suggested workout plan">{suggested?.entries.length ? <button className="card suggested-plan-card" onClick={() => router.push(`/dashboard/workouts/new?${new URLSearchParams({ plan: suggested.date, intent: createId() })}`)}><span className="dashboard-progress-icon"><Dumbbell size={25} /></span><div><h2>{suggestedTitle}</h2><p>{format(anchor, "MMMM d, yyyy")} · {suggested.entries.length} exercises · {suggested.entries.reduce((sum, entry) => sum + entry.exercise.sets.length, 0)} previously completed sets</p><p>Based on {suggested.trainingDays} past {suggested.weekday} training day{suggested.trainingDays === 1 ? "" : "s"}{suggested.trainingDays === 1 ? "—an initial suggestion, not an established routine" : " in the preceding eight weeks"}.</p><span>Review, choose sets, and customize <ChevronRight size={15} /></span></div><ChevronRight size={20} /></button> : <Card className="suggested-plan-empty"><h2>{suggestedTitle}</h2><p>{loading || !today ? "Looking for your weekday training pattern…" : `No earlier ${suggested?.weekday} training pattern for ${format(anchor, "MMMM d, yyyy")} yet. Suggestions use completed workouts from the preceding eight weeks.`}</p></Card>}</section>
     <div className="dashboard-main-grid">
       <section className="dashboard-entries"><div className="dashboard-section-heading"><div><h2>{period === "day" ? "Your exercises" : `Exercises this ${period}`}</h2><p>{today ? periodLabel : "Loading your date…"}</p></div><Link href="/dashboard/workouts">History <ChevronRight size={16} /></Link></div>

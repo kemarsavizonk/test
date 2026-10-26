@@ -9,6 +9,7 @@ A responsive, private strength-training tracker for logging individual sets, rev
 - Multi-exercise sessions, automatic timestamps, notes, duration, drafts, and completed workouts
 - Searchable history and reusable starter/custom exercise names
 - Dashboard metrics derived from actual completed workout data
+- Dated body-weight tracking, dual-unit displays, trend chart, and editable measurement history
 - Daily, weekly, monthly, quarterly, six-month, yearly, and custom reports
 - Volume and muscle-group charts, period comparisons, and plain-language summaries
 - Epley estimated one-rep max, maximum weight, reps, and session-volume records
@@ -34,7 +35,7 @@ Without Supabase environment variables, the **Explore preview** flow stores work
 ## Supabase setup
 
 1. Create a Supabase project.
-2. Open the SQL editor and run [`supabase/migrations/202610120001_initial_schema.sql`](supabase/migrations/202610120001_initial_schema.sql).
+2. Open the SQL editor and run [`supabase/migrations/202610120001_initial_schema.sql`](supabase/migrations/202610120001_initial_schema.sql), then [`supabase/migrations/202610260001_body_weight_entries.sql`](supabase/migrations/202610260001_body_weight_entries.sql). For an existing installation, run only migrations not already applied.
 3. In Authentication → URL Configuration, set the site URL and add these redirect URLs:
    - `http://localhost:3000/auth/callback`
    - `https://YOUR-VERCEL-DOMAIN/auth/callback`
@@ -140,6 +141,27 @@ prescribing new exercises or increased loads.
 - Warm-up and incomplete sets are excluded from working volume and record calculations.
 - Estimated 1RM uses the Epley formula: `weight × (1 + reps ÷ 30)` for 1–30 repetitions.
 - A percentage change is omitted when the comparison value is zero, avoiding misleading infinity values.
+
+## Body-weight tracker
+
+The dashboard's **Body weight** card sits between the training summary and suggested
+workout. It shows the latest measurement by measurement date, independent of the
+training date filter. Tap it, or choose **Body weight** in the menu, to log a weight
+in kg or lb with its measurement date. Both units are displayed, using the profile
+preference initially. Switching entry units converts the current value without
+changing the underlying measurement.
+
+The tracker includes a dated line chart and newest-first history. Changes compare
+with the preceding measurement date, including after backdating, editing, or
+deleting an entry. Increases and decreases use neutral labels, not fitness
+achievement colors. There is one entry per date; edit an existing date to correct
+it. Future dates are rejected. Deleting requires confirmation.
+
+Authenticated measurements sync through the private `body_weight_entries` table
+with owner-only row-level security. Run the body-weight migration above before
+deploying this feature. No service-role key is needed. Without Supabase config,
+preview measurements remain on the current browser only. Authentication or cloud
+storage failures are reported, never silently saved as local preview data.
 
 ## Achievements and history filters
 
